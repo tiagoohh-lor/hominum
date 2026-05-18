@@ -1209,7 +1209,7 @@ async function abrirDetalheCliente(cnpj) {
     </div>`).join('');
 
   // Alertas nas abas
-  const alertaContratos    = equips.some(isVencidoVigente);
+  const alertaContratos    = equips.some(e => isVencidoVigente(e) || isVencido(e.vencCalib) || isVencido(e.vencTrein));
   const alertaEquipamentos = equips.some(e => isVencido(e.vencCalib) || isVencido(e.vencTrein));
   const alertaConsumo      = consumoAll.some(c => c.classificacao === 'VERIFIQUE CONSUMO');
   document.getElementById('cli-tab-contratos').innerHTML    = `📋 Contratos${alertaContratos ? '<span class="tab-alerta"></span>' : ''}`;
