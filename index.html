@@ -22,12 +22,33 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #
 #sidebar nav { flex: 1; padding: 16px 0; }
 #sidebar nav a {
   display: flex; align-items: center; gap: 10px;
-  padding: 12px 20px; color: rgba(255,255,255,0.7); text-decoration: none;
-  font-size: 14px; transition: all 0.2s; cursor: pointer;
+  padding: 11px 20px; color: rgba(255,255,255,0.7); text-decoration: none;
+  font-size: 13px; transition: all 0.2s; cursor: pointer;
   border-left: 3px solid transparent;
 }
-#sidebar nav a:hover, #sidebar nav a.active { background: rgba(255,255,255,0.1); color: white; border-left-color: #e94560; }
-#sidebar nav a .icon { font-size: 18px; width: 24px; text-align: center; }
+#sidebar nav a:hover { background: rgba(255,255,255,0.07); color: white; border-left-color: rgba(233,69,96,0.5); }
+#sidebar nav a.active { background: rgba(255,255,255,0.12); color: white; border-left-color: #e94560; }
+#sidebar nav a .icon { font-size: 16px; width: 22px; text-align: center; }
+/* Seções do menu */
+.nav-section { border-top: 1px solid rgba(255,255,255,0.07); margin-top: 4px; padding-top: 4px; }
+.nav-section-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.22); padding: 10px 20px 2px;
+}
+/* Tom mais fraco — seção secundária */
+.nav-section-weak a { color: rgba(255,255,255,0.45); }
+.nav-section-weak a:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.75); }
+/* Submenu */
+.nav-sub-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px 9px 44px; color: rgba(255,255,255,0.45); font-size: 12px;
+  cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s;
+}
+.nav-sub-item:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.75); }
+.nav-sub-item.active { color: white; border-left-color: #e94560; background: rgba(255,255,255,0.08); }
+.nav-expand-arrow { margin-left: auto; font-size: 11px; transition: transform 0.2s; opacity: 0.5; }
+.nav-expand-arrow.open { transform: rotate(90deg); }
+#nav-sub-config { overflow: hidden; }
 #sidebar .version { padding: 16px 20px; font-size: 11px; color: rgba(255,255,255,0.3); border-top: 1px solid rgba(255,255,255,0.1); }
 
 #main { margin-left: 220px; flex: 1; padding: 24px; }
@@ -297,13 +318,36 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
 <div id="sidebar">
   <div class="logo" style="padding:18px 20px"><img src="logo.png" alt="Hominum" style="width:130px;filter:brightness(0) invert(1)"></div>
   <nav>
-    <a class="active" onclick="showPage('dashboard')"><span class="icon">📊</span> Dashboard</a>
-    <a onclick="showPage('clientes')"><span class="icon">👥</span> Clientes</a>
-    <a onclick="showPage('contratos')"><span class="icon">📋</span> Contratos</a>
-    <a onclick="showPage('rastreabilidade')"><span class="icon">🔍</span> Rastreabilidade</a>
-    <a onclick="showPage('vendas')"><span class="icon">💰</span> Radar de Vendas</a>
-    <a onclick="showPage('consumo')"><span class="icon">📦</span> Consumo</a>
-    <a onclick="showPage('importar')"><span class="icon">📤</span> Importar Dados</a>
+    <!-- Dashboard -->
+    <a class="active" data-page="dashboard" onclick="showPage('dashboard')"><span class="icon">📊</span> Dashboard</a>
+
+    <!-- Gestão -->
+    <div class="nav-section">
+      <div class="nav-section-label">Gestão</div>
+      <a data-page="clientes"        onclick="showPage('clientes')"><span class="icon">👥</span> Clientes</a>
+      <a data-page="contratos"       onclick="showPage('contratos')"><span class="icon">📋</span> Contratos</a>
+      <a data-page="rastreabilidade" onclick="showPage('rastreabilidade')"><span class="icon">🔍</span> Rastreabilidade</a>
+      <a data-page="vendas"          onclick="showPage('vendas')"><span class="icon">💰</span> Radar de Vendas</a>
+      <a data-page="consumo"         onclick="showPage('consumo')"><span class="icon">📦</span> Consumo</a>
+    </div>
+
+    <!-- Módulos -->
+    <div class="nav-section nav-section-weak">
+      <div class="nav-section-label">Módulos</div>
+      <a onclick="void(0)" style="cursor:default" title="Em breve"><span class="icon">🧪</span> Controle Insumos</a>
+    </div>
+
+    <!-- Sistema -->
+    <div class="nav-section nav-section-weak">
+      <div class="nav-section-label">Sistema</div>
+      <a onclick="toggleNavConfig()" id="nav-btn-config">
+        <span class="icon">⚙️</span> Configurações
+        <span class="nav-expand-arrow" id="nav-config-arrow">›</span>
+      </a>
+      <div id="nav-sub-config" style="display:none">
+        <div class="nav-sub-item" data-page="importar" onclick="showPage('importar')">📤 Importar Dados</div>
+      </div>
+    </div>
   </nav>
   <div class="sidebar-user" id="sidebar-user-info" style="display:none">
     <strong id="sidebar-user-email"></strong>
@@ -961,11 +1005,19 @@ const db = {
 function showPage(name) {
   localStorage.setItem('paginaAtual', name);
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('active'));
+  // Limpa active de links e sub-itens
+  document.querySelectorAll('#sidebar nav a[data-page], #sidebar .nav-sub-item[data-page]').forEach(a => a.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  const pages = ['dashboard','clientes','contratos','rastreabilidade','vendas','consumo','importar'];
-  const idx = pages.indexOf(name);
-  if (idx >= 0) document.querySelectorAll('#sidebar nav a')[idx].classList.add('active');
+  // Ativa o link correto pelo data-page
+  const link = document.querySelector(`#sidebar [data-page="${name}"]`);
+  if (link) {
+    link.classList.add('active');
+    // Se for subitem, abre o menu de configurações
+    if (link.classList.contains('nav-sub-item')) {
+      document.getElementById('nav-sub-config').style.display = 'block';
+      document.getElementById('nav-config-arrow').classList.add('open');
+    }
+  }
   if (name === 'dashboard') loadDashboard();
   if (name === 'clientes') { paginaClientes = 0; renderClientes(); }
   if (name === 'contratos') { paginaContratos = 0; dadosContratosFiltrado = null; renderContratos(); }
@@ -973,6 +1025,14 @@ function showPage(name) {
   if (name === 'vendas') { paginaVendas = 0; dadosVendasFiltrado = null; renderVendas(); }
   if (name === 'consumo') { paginaConsumo = 0; dadosConsumoFiltrado = null; renderConsumo(); }
   if (name === 'importar') loadImportStatus();
+}
+
+function toggleNavConfig() {
+  const sub   = document.getElementById('nav-sub-config');
+  const arrow = document.getElementById('nav-config-arrow');
+  const open  = sub.style.display !== 'none';
+  sub.style.display   = open ? 'none' : 'block';
+  arrow.classList.toggle('open', !open);
 }
 
 // ============================================================
