@@ -3037,13 +3037,15 @@ async function rcInit() {
       maxZoom: 12,
     }).addTo(rcMapInstance);
   }
-  // Corrige tamanho após o container ficar visível
-  setTimeout(() => rcMapInstance.invalidateSize(), 50);
+  // Corrige tamanho após o container ficar visível (200ms mais seguro)
+  setTimeout(() => rcMapInstance.invalidateSize(), 200);
 
   // Carrega dados apenas uma vez
   if (!rcCarregado) {
     await rcCarregarDados();
     rcCarregado = true;
+    // Segundo invalidateSize depois que tudo carregou
+    setTimeout(() => rcMapInstance.invalidateSize(), 100);
   }
 }
 
@@ -3067,7 +3069,8 @@ async function rcCarregarDados() {
   clientes.forEach(c => {
     if (!c.cnpj) return;
     const base = cnpjMap.get(c.cnpj) || {};
-    cnpjMap.set(c.cnpj, { ...base, ...c });
+    // Preserva cidade do equipamento se o cadastro de cliente não tiver
+    cnpjMap.set(c.cnpj, { ...base, ...c, cidade: c.cidade || base.cidade });
   });
 
   rcCidadesMap.clear();
@@ -3100,24 +3103,43 @@ function rcRenderLista() {
 }
 
 async function rcCarregarGeoJSON() {
-  const url  = 'https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-42-mun.json';
-  const resp = await fetch(url);
-  const geo  = await resp.json();
+  // jsDelivr é mais confiável que raw.githubusercontent.com
+  const urls = [
+    'https://cdn.jsdelivr.net/gh/tbrugz/geodata-br@master/geojson/geojs-42-mun.json',
+    'https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-42-mun.json',
+  ];
+
+  let geo = null;
+  for (const url of urls) {
+    try {
+      const resp = await fetch(url);
+      if (resp.ok) { geo = await resp.json(); break; }
+    } catch(e) { /* tenta próximo */ }
+  }
+
+  if (!geo) {
+    document.getElementById('rc-painel-sub').textContent = '⚠️ Falha ao carregar mapa de SC';
+    return;
+  }
 
   if (rcGeoLayer) rcGeoLayer.remove();
 
   rcGeoLayer = L.geoJSON(geo, {
     style: f => {
-      const key   = rcNorm(f.properties.NM_MUNICIP || '');
+      // NM_MUNICIP pode ser "FLORIANOPOLIS" ou "FLORIANÓPOLIS" — rcNorm trata os dois
+      const nomeGeo = f.properties.NM_MUNICIP || f.properties.name || '';
+      const key   = rcNorm(nomeGeo);
       const data  = rcCidadesMap.get(key);
       const count = data ? data.clientes.length : 0;
       return { fillColor: rcCor(count), fillOpacity: rcOpacity(count), color: '#94a3b8', weight: 0.5 };
     },
     onEachFeature: (f, layer) => {
-      const key    = rcNorm(f.properties.NM_MUNICIP || '');
-      const nomeOr = f.properties.NM_MUNICIP || '';
+      const nomeGeo = f.properties.NM_MUNICIP || f.properties.name || '';
+      const key    = rcNorm(nomeGeo);
       const data   = rcCidadesMap.get(key);
       const count  = data ? data.clientes.length : 0;
+      // Mostra nome bonito do nosso mapa ou o do GeoJSON
+      const nomeOr = data ? data.nome : nomeGeo;
 
       layer.bindTooltip(
         `<strong>${nomeOr}</strong><br>${count} cliente${count !== 1 ? 's' : ''}`,
