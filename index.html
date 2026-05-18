@@ -196,6 +196,22 @@ tbody tr:last-child td { border-bottom: none; }
 .detail-tab.active { color:#0f3460; border-bottom-color:#0f3460; }
 .detail-panel { display:none; }
 .detail-panel.active { display:block; }
+/* Insumos */
+.insumo-alerta-banner {
+  background:linear-gradient(135deg,#fff7ed,#fef3c7); border:1px solid #fed7aa;
+  border-radius:12px; padding:14px 20px; margin-bottom:20px;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.insumo-alerta-banner strong { color:#92400e; }
+.insumo-alerta-banner span  { color:#b45309; font-size:13px; }
+.estoque-bar { height:5px; background:#e2e8f0; border-radius:10px; overflow:hidden; margin-top:4px; min-width:80px; }
+.estoque-fill { height:100%; border-radius:10px; }
+.ajuste-btn {
+  background:none; border:1px solid #e2e8f0; color:#64748b;
+  width:26px; height:26px; border-radius:6px; cursor:pointer; font-size:14px;
+  display:inline-flex; align-items:center; justify-content:center; line-height:1;
+}
+.ajuste-btn:hover { background:#f1f5f9; color:#0f3460; }
 /* Hero Vendas */
 .vendas-hero {
   display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;
@@ -334,7 +350,7 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
     <!-- Módulos -->
     <div class="nav-section nav-section-weak">
       <div class="nav-section-label">Módulos</div>
-      <a onclick="void(0)" style="cursor:default" title="Em breve"><span class="icon">🧪</span> Controle Insumos</a>
+      <a data-page="insumos" onclick="showPage('insumos')"><span class="icon">🧪</span> Controle Insumos</a>
     </div>
 
     <!-- Sistema -->
@@ -891,6 +907,96 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
     </div>
   </div>
 
+  <!-- CONTROLE INSUMOS -->
+  <div id="page-insumos" class="page">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>Controle de Insumos</h1>
+        <p>Gestão de estoque de materiais e consumíveis</p>
+      </div>
+      <button class="btn btn-primary" onclick="abrirFormInsumo()">+ Novo Insumo</button>
+    </div>
+    <div id="insumos-alerta-banner" style="display:none" class="insumo-alerta-banner">
+      <span style="font-size:20px">⚠️</span>
+      <div><strong id="insumos-alerta-txt"></strong><br><span id="insumos-alerta-sub"></span></div>
+    </div>
+    <div class="cards" id="insumos-cards-topo"></div>
+    <div class="table-box" style="margin-top:16px">
+      <div class="table-toolbar">
+        <input type="text" id="insumos-busca" placeholder="🔍  Buscar insumo..." oninput="renderInsumos()">
+        <select id="insumos-cat" onchange="renderInsumos()">
+          <option value="">Todas as categorias</option>
+          <option value="Embalagem">Embalagem</option>
+          <option value="Identificação">Identificação</option>
+          <option value="Proteção">Proteção</option>
+          <option value="Escritório">Escritório</option>
+          <option value="Segurança">Segurança</option>
+          <option value="Limpeza">Limpeza</option>
+          <option value="Outros">Outros</option>
+        </select>
+        <select id="insumos-status" onchange="renderInsumos()">
+          <option value="">Todos os status</option>
+          <option value="critico">🔴 Crítico</option>
+          <option value="alerta">🟡 Alerta</option>
+          <option value="ok">🟢 OK</option>
+        </select>
+        <span class="table-count" id="count-insumos"></span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Insumo</th><th>Categoria</th><th>Unidade</th>
+            <th style="text-align:center">Estoque Atual</th>
+            <th style="text-align:center">Mínimo</th>
+            <th style="min-width:120px">Nível</th>
+            <th>Status</th>
+            <th>Atualizado</th>
+            <th style="text-align:center">Ajustar</th>
+          </tr></thead>
+          <tbody id="tbody-insumos"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL INSUMO -->
+  <div id="modal-insumo-overlay" onclick="fecharFormInsumo(event)" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:16px;width:560px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+      <div style="padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+        <h2 id="modal-insumo-titulo" style="font-size:16px;color:#0f3460;font-weight:700">Novo Insumo</h2>
+        <button onclick="fecharFormInsumo()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8">✕</button>
+      </div>
+      <div style="padding:24px;overflow-y:auto">
+        <input type="hidden" id="fi-id">
+        <div class="form-grid">
+          <div class="form-group full"><label>Nome do Insumo *</label><input id="fi-nome" placeholder="Ex: Fita Adesiva Larga"></div>
+          <div class="form-group"><label>Categoria</label>
+            <select id="fi-categoria">
+              <option value="Embalagem">Embalagem</option>
+              <option value="Identificação">Identificação</option>
+              <option value="Proteção">Proteção</option>
+              <option value="Escritório">Escritório</option>
+              <option value="Segurança">Segurança</option>
+              <option value="Limpeza">Limpeza</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Unidade de Medida</label><input id="fi-unidade" placeholder="Ex: Rolo, Caixa, Unidade"></div>
+          <div class="form-group"><label>Estoque Atual *</label><input id="fi-estoqueAtual" type="number" min="0" placeholder="0"></div>
+          <div class="form-group"><label>Estoque Mínimo *</label><input id="fi-estoqueMinimo" type="number" min="0" placeholder="0"></div>
+          <div class="form-group"><label>Estoque Ideal</label><input id="fi-estoqueIdeal" type="number" min="0" placeholder="0"></div>
+          <div class="form-group full"><label>Fornecedor</label><input id="fi-fornecedor" placeholder="Nome do fornecedor (opcional)"></div>
+          <div class="form-group full"><label>Observação</label><textarea id="fi-observacao" rows="2" style="resize:vertical;font-family:inherit;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:#f8fafc;width:100%;outline:none"></textarea></div>
+        </div>
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;gap:8px;justify-content:flex-end">
+        <button id="btn-excluir-insumo" class="btn btn-danger" style="margin-right:auto;display:none" onclick="excluirInsumo()">🗑️ Excluir</button>
+        <button class="btn-ghost" onclick="fecharFormInsumo()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarInsumo()">💾 Salvar</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -997,6 +1103,7 @@ const db = {
   consumo:      new FSCollection('consumo'),
   metas:        new FSCollection('metas'),
   clientes:     new FSCollection('clientes'),
+  insumos:      new FSCollection('insumos'),
 };
 
 // ============================================================
@@ -1025,6 +1132,7 @@ function showPage(name) {
   if (name === 'vendas') { paginaVendas = 0; dadosVendasFiltrado = null; renderVendas(); }
   if (name === 'consumo') { paginaConsumo = 0; dadosConsumoFiltrado = null; renderConsumo(); }
   if (name === 'importar') loadImportStatus();
+  if (name === 'insumos')  renderInsumos();
 }
 
 function toggleNavConfig() {
@@ -2549,6 +2657,183 @@ dropZone.addEventListener('drop', e => {
   const file = e.dataTransfer.files[0];
   if (file) importFile(file);
 });
+
+// ============================================================
+// CONTROLE DE INSUMOS
+// ============================================================
+const INSUMOS_SEED = [
+  { nome:'Fita Adesiva Larga',    categoria:'Embalagem',     unidade:'Rolo',    estoqueAtual:8,   estoqueMinimo:15, estoqueIdeal:50, fornecedor:'Distribuidora ABC' },
+  { nome:'Caixas Pequenas',       categoria:'Embalagem',     unidade:'Unidade', estoqueAtual:120, estoqueMinimo:50, estoqueIdeal:200, fornecedor:'Papelaria Central' },
+  { nome:'Caixas Médias',         categoria:'Embalagem',     unidade:'Unidade', estoqueAtual:42,  estoqueMinimo:50, estoqueIdeal:150, fornecedor:'Papelaria Central' },
+  { nome:'Sacos Plásticos',       categoria:'Embalagem',     unidade:'Pacote',  estoqueAtual:35,  estoqueMinimo:20, estoqueIdeal:80,  fornecedor:'Plastikos Ltda' },
+  { nome:'Etiquetas Adesivas',    categoria:'Identificação', unidade:'Folha',   estoqueAtual:5,   estoqueMinimo:25, estoqueIdeal:100, fornecedor:'Gráfica Express' },
+  { nome:'Papel Bolha',           categoria:'Proteção',      unidade:'Metro',   estoqueAtual:90,  estoqueMinimo:30, estoqueIdeal:120, fornecedor:'Distribuidora ABC' },
+  { nome:'Canetas Esferográficas',categoria:'Escritório',    unidade:'Unidade', estoqueAtual:14,  estoqueMinimo:10, estoqueIdeal:30,  fornecedor:'Papelaria Central' },
+  { nome:'Luvas Descartáveis',    categoria:'Segurança',     unidade:'Caixa',   estoqueAtual:3,   estoqueMinimo:5,  estoqueIdeal:20,  fornecedor:'EPI Seguro' },
+  { nome:'Álcool 70%',            categoria:'Limpeza',       unidade:'Litro',   estoqueAtual:6,   estoqueMinimo:10, estoqueIdeal:30,  fornecedor:'Higiene Total' },
+  { nome:'Papel A4',              categoria:'Escritório',    unidade:'Resma',   estoqueAtual:18,  estoqueMinimo:5,  estoqueIdeal:20,  fornecedor:'Papelaria Central' },
+];
+
+function insumoBadge(atual, minimo) {
+  if (atual < minimo)          return { label:'Crítico', cls:'badge-red',    status:'critico' };
+  if (atual < minimo * 1.5)   return { label:'Alerta',  cls:'badge-orange', status:'alerta'  };
+  return                              { label:'OK',      cls:'badge-green',  status:'ok'      };
+}
+
+function estoqueBarHtml(atual, minimo, ideal) {
+  const max   = Math.max(ideal || minimo * 2, atual, 1);
+  const perc  = Math.min(Math.round((atual / max) * 100), 100);
+  const { status } = insumoBadge(atual, minimo);
+  const color = status === 'critico' ? '#ef4444' : status === 'alerta' ? '#f59e0b' : '#10b981';
+  return `<div class="estoque-bar"><div class="estoque-fill" style="width:${perc}%;background:${color}"></div></div>`;
+}
+
+async function renderInsumos() {
+  let todos = await db.insumos.toArray();
+
+  // Seed automático na primeira vez
+  if (todos.length === 0) {
+    const hoje = new Date().toISOString().slice(0,10);
+    await db.insumos.bulkAdd(INSUMOS_SEED.map(i => ({ ...i, observacao: null, ultimaAtualizacao: hoje })));
+    todos = await db.insumos.toArray();
+  }
+
+  // Filtros
+  const busca  = document.getElementById('insumos-busca').value.toLowerCase();
+  const cat    = document.getElementById('insumos-cat').value;
+  const status = document.getElementById('insumos-status').value;
+  let filtrado = todos.filter(i => {
+    const b = insumoBadge(i.estoqueAtual || 0, i.estoqueMinimo || 0);
+    if (busca  && !i.nome?.toLowerCase().includes(busca) && !i.fornecedor?.toLowerCase().includes(busca)) return false;
+    if (cat    && i.categoria !== cat) return false;
+    if (status && b.status !== status) return false;
+    return true;
+  });
+
+  document.getElementById('count-insumos').textContent = `${filtrado.length} insumo${filtrado.length !== 1 ? 's' : ''}`;
+
+  // Cards topo
+  const criticos = todos.filter(i => insumoBadge(i.estoqueAtual||0, i.estoqueMinimo||0).status === 'critico').length;
+  const alertas  = todos.filter(i => insumoBadge(i.estoqueAtual||0, i.estoqueMinimo||0).status === 'alerta').length;
+  document.getElementById('insumos-cards-topo').innerHTML = `
+    <div class="card blue"><div class="card-label">Total de Itens</div><div class="card-value">${todos.length}</div><div class="card-sub">cadastrados</div></div>
+    <div class="card red"><div class="card-label">🔴 Crítico</div><div class="card-value">${criticos}</div><div class="card-sub">abaixo do mínimo</div></div>
+    <div class="card orange"><div class="card-label">🟡 Alerta</div><div class="card-value">${alertas}</div><div class="card-sub">próximo do mínimo</div></div>
+    <div class="card green"><div class="card-label">🟢 OK</div><div class="card-value">${todos.length - criticos - alertas}</div><div class="card-sub">estoque adequado</div></div>
+  `;
+
+  // Banner de alerta
+  const banner = document.getElementById('insumos-alerta-banner');
+  const criticosList = todos.filter(i => insumoBadge(i.estoqueAtual||0, i.estoqueMinimo||0).status === 'critico');
+  if (criticosList.length > 0) {
+    banner.style.display = 'flex';
+    document.getElementById('insumos-alerta-txt').textContent = `${criticosList.length} insumo(s) com estoque crítico!`;
+    document.getElementById('insumos-alerta-sub').textContent = criticosList.map(i => i.nome).join(' · ');
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // Tabela
+  document.getElementById('tbody-insumos').innerHTML = filtrado.length === 0
+    ? '<tr><td colspan="9" class="no-data"><p>Nenhum insumo encontrado</p></td></tr>'
+    : filtrado.sort((a, b) => {
+        const sa = insumoBadge(a.estoqueAtual||0, a.estoqueMinimo||0).status;
+        const sb = insumoBadge(b.estoqueAtual||0, b.estoqueMinimo||0).status;
+        const ord = { critico:0, alerta:1, ok:2 };
+        return ord[sa] - ord[sb];
+      }).map(i => {
+        const b = insumoBadge(i.estoqueAtual||0, i.estoqueMinimo||0);
+        return `<tr>
+          <td><strong>${i.nome}</strong>${i.fornecedor ? `<div style="font-size:11px;color:#94a3b8">${i.fornecedor}</div>` : ''}</td>
+          <td><span class="badge badge-gray" style="font-size:11px">${i.categoria||'—'}</span></td>
+          <td style="color:#64748b;font-size:13px">${i.unidade||'—'}</td>
+          <td style="text-align:center;font-size:16px;font-weight:700;color:${b.status==='critico'?'#ef4444':b.status==='alerta'?'#f59e0b':'#10b981'}">${i.estoqueAtual??0}</td>
+          <td style="text-align:center;color:#64748b;font-size:13px">${i.estoqueMinimo??0}</td>
+          <td>${estoqueBarHtml(i.estoqueAtual||0, i.estoqueMinimo||0, i.estoqueIdeal||0)}<div style="font-size:10px;color:#94a3b8;margin-top:2px">${i.estoqueAtual??0} / ${i.estoqueIdeal||i.estoqueMinimo||0}</div></td>
+          <td><span class="badge ${b.cls}">${b.label}</span></td>
+          <td style="font-size:12px;color:#94a3b8">${i.ultimaAtualizacao ? new Date(i.ultimaAtualizacao+'T00:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+          <td style="text-align:center;white-space:nowrap">
+            <button class="ajuste-btn" onclick="ajustarEstoque('${i.id}', -1)" title="Retirar">−</button>
+            <button class="ajuste-btn" onclick="ajustarEstoque('${i.id}', 1)" title="Adicionar" style="margin:0 4px">+</button>
+            <button class="ajuste-btn" onclick="abrirFormInsumo('${i.id}')" title="Editar">✏️</button>
+          </td>
+        </tr>`;
+      }).join('');
+}
+
+async function ajustarEstoque(id, delta) {
+  const insumo = await db.insumos.get(id);
+  if (!insumo) return;
+  const novo = Math.max(0, (insumo.estoqueAtual || 0) + delta);
+  await db.insumos.update(id, { estoqueAtual: novo, ultimaAtualizacao: new Date().toISOString().slice(0,10) });
+  renderInsumos();
+}
+
+async function abrirFormInsumo(id = null) {
+  document.getElementById('modal-insumo-titulo').textContent = id ? 'Editar Insumo' : 'Novo Insumo';
+  document.getElementById('btn-excluir-insumo').style.display = id ? 'inline-block' : 'none';
+  ['id','nome','unidade','fornecedor','observacao'].forEach(f => {
+    const el = document.getElementById('fi-' + f);
+    if (el) el.value = '';
+  });
+  ['estoqueAtual','estoqueMinimo','estoqueIdeal'].forEach(f => {
+    const el = document.getElementById('fi-' + f);
+    if (el) el.value = '';
+  });
+  document.getElementById('fi-categoria').value = 'Embalagem';
+
+  if (id) {
+    const i = await db.insumos.get(id);
+    if (i) {
+      document.getElementById('fi-id').value           = i.id;
+      document.getElementById('fi-nome').value         = i.nome || '';
+      document.getElementById('fi-categoria').value    = i.categoria || 'Embalagem';
+      document.getElementById('fi-unidade').value      = i.unidade || '';
+      document.getElementById('fi-estoqueAtual').value = i.estoqueAtual ?? '';
+      document.getElementById('fi-estoqueMinimo').value= i.estoqueMinimo ?? '';
+      document.getElementById('fi-estoqueIdeal').value = i.estoqueIdeal ?? '';
+      document.getElementById('fi-fornecedor').value   = i.fornecedor || '';
+      document.getElementById('fi-observacao').value   = i.observacao || '';
+    }
+  }
+  document.getElementById('modal-insumo-overlay').style.display = 'flex';
+  document.getElementById('fi-nome').focus();
+}
+
+function fecharFormInsumo(e) {
+  if (e && e.target !== document.getElementById('modal-insumo-overlay')) return;
+  document.getElementById('modal-insumo-overlay').style.display = 'none';
+}
+
+async function salvarInsumo() {
+  const nome = document.getElementById('fi-nome').value.trim();
+  if (!nome) { alert('Nome do insumo é obrigatório.'); document.getElementById('fi-nome').focus(); return; }
+  const dados = {
+    nome,
+    categoria:     document.getElementById('fi-categoria').value,
+    unidade:       document.getElementById('fi-unidade').value.trim() || null,
+    estoqueAtual:  Number(document.getElementById('fi-estoqueAtual').value) || 0,
+    estoqueMinimo: Number(document.getElementById('fi-estoqueMinimo').value) || 0,
+    estoqueIdeal:  Number(document.getElementById('fi-estoqueIdeal').value) || 0,
+    fornecedor:    document.getElementById('fi-fornecedor').value.trim() || null,
+    observacao:    document.getElementById('fi-observacao').value.trim() || null,
+    ultimaAtualizacao: new Date().toISOString().slice(0,10),
+  };
+  const idVal = document.getElementById('fi-id').value;
+  if (idVal) await db.insumos.update(idVal, dados);
+  else       await db.insumos.add(dados);
+  document.getElementById('modal-insumo-overlay').style.display = 'none';
+  renderInsumos();
+}
+
+async function excluirInsumo() {
+  const idVal = document.getElementById('fi-id').value;
+  if (!idVal) return;
+  if (!confirm('Excluir este insumo do cadastro?')) return;
+  await db.insumos.delete(idVal);
+  document.getElementById('modal-insumo-overlay').style.display = 'none';
+  renderInsumos();
+}
 
 // ============================================================
 // AUTENTICAÇÃO
