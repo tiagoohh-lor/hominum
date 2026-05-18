@@ -876,6 +876,7 @@ const db = {
 // NAVIGATION
 // ============================================================
 function showPage(name) {
+  localStorage.setItem('paginaAtual', name);
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
@@ -2410,9 +2411,9 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('login-overlay').style.display = 'none';
       document.getElementById('sidebar-user-info').style.display = 'flex';
       document.getElementById('sidebar-user-email').textContent = user.email;
-      // Carrega dados iniciais
-      const count = await db.equipamentos.count();
-      if (count > 0) loadDashboard();
+      // Restaura a última página visitada
+      const ultimaPagina = localStorage.getItem('paginaAtual') || 'dashboard';
+      showPage(ultimaPagina);
       await loadImportStatus();
     } else {
       // Não logado — exibe tela de login
