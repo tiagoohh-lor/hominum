@@ -179,7 +179,10 @@ th.sortable { cursor:pointer; user-select:none; white-space:nowrap; }
 th.sortable:hover { background:#e2e8f0; }
 th.sortable.asc::after  { content:' ▲'; font-size:10px; color:#0f3460; }
 th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
-.tab-alerta { color:#f59e0b; font-size:12px; margin-left:3px; }
+.tab-alerta {
+  display:inline-block; width:8px; height:8px; background:#e94560;
+  border-radius:50%; position:relative; top:-6px; margin-left:3px;
+}
 /* LOADING */
 #loading-overlay {
   position:fixed; inset:0; background:#0f3460; z-index:10000;
@@ -1208,9 +1211,9 @@ async function abrirDetalheCliente(cnpj) {
   const alertaContratos    = equips.some(isVencidoVigente);
   const alertaEquipamentos = equips.some(e => isVencido(e.vencCalib) || isVencido(e.vencTrein));
   const alertaConsumo      = consumoAll.some(c => c.classificacao === 'VERIFIQUE CONSUMO');
-  document.getElementById('cli-tab-contratos').innerHTML    = `📋 Contratos${alertaContratos ? '<span class="tab-alerta">⚠️</span>' : ''}`;
-  document.getElementById('cli-tab-equipamentos').innerHTML = `🔧 Equipamentos${alertaEquipamentos ? '<span class="tab-alerta">⚠️</span>' : ''}`;
-  document.getElementById('cli-tab-consumo').innerHTML      = `📦 Consumo${alertaConsumo ? '<span class="tab-alerta">⚠️</span>' : ''}`;
+  document.getElementById('cli-tab-contratos').innerHTML    = `📋 Contratos${alertaContratos ? '<span class="tab-alerta"></span>' : ''}`;
+  document.getElementById('cli-tab-equipamentos').innerHTML = `🔧 Equipamentos${alertaEquipamentos ? '<span class="tab-alerta"></span>' : ''}`;
+  document.getElementById('cli-tab-consumo').innerHTML      = `📦 Consumo${alertaConsumo ? '<span class="tab-alerta"></span>' : ''}`;
 
   // Montar grupos para ordenação
   const gruposMap = new Map();
