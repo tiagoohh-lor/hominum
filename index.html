@@ -175,6 +175,51 @@ tbody tr:last-child td { border-bottom: none; }
 .detail-tab.active { color:#0f3460; border-bottom-color:#0f3460; }
 .detail-panel { display:none; }
 .detail-panel.active { display:block; }
+/* Hero Vendas */
+.vendas-hero {
+  display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;
+}
+.hero-card {
+  background:linear-gradient(135deg,#0f3460 0%,#16213e 100%);
+  border-radius:16px; padding:28px 32px; color:white; position:relative; overflow:hidden;
+}
+.hero-card::before {
+  content:''; position:absolute; top:-40px; right:-40px;
+  width:160px; height:160px; background:rgba(255,255,255,0.05); border-radius:50%;
+}
+.hero-card::after {
+  content:''; position:absolute; bottom:-60px; right:20px;
+  width:200px; height:200px; background:rgba(255,255,255,0.04); border-radius:50%;
+}
+.hero-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.55); margin-bottom:8px; }
+.hero-value { font-size:36px; font-weight:800; letter-spacing:-1px; line-height:1; margin-bottom:6px; }
+.hero-sub { font-size:13px; color:rgba(255,255,255,0.6); }
+.hero-badge {
+  display:inline-block; padding:3px 10px; border-radius:20px;
+  font-size:12px; font-weight:700; margin-top:10px;
+}
+.hero-badge.green  { background:rgba(16,185,129,0.2); color:#34d399; }
+.hero-badge.orange { background:rgba(245,158,11,0.2); color:#fbbf24; }
+.hero-badge.red    { background:rgba(239,68,68,0.2);  color:#f87171; }
+.progress-wrap { margin-top:16px; }
+.progress-label { display:flex; justify-content:space-between; font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:6px; }
+.progress-bar { height:6px; background:rgba(255,255,255,0.12); border-radius:10px; overflow:hidden; }
+.progress-fill { height:100%; border-radius:10px; transition:width 0.8s ease; }
+.hero-meta-card {
+  background:white; border-radius:16px; padding:28px 32px;
+  border:2px solid #e2e8f0; position:relative; overflow:hidden;
+}
+.hero-meta-card::before {
+  content:''; position:absolute; top:-40px; right:-40px;
+  width:160px; height:160px; background:#f0f4ff; border-radius:50%;
+}
+.hero-meta-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; margin-bottom:8px; }
+.hero-meta-value { font-size:36px; font-weight:800; color:#0f3460; letter-spacing:-1px; line-height:1; margin-bottom:6px; }
+.hero-meta-sub { font-size:13px; color:#64748b; }
+.hero-stats { display:flex; gap:24px; margin-top:16px; padding-top:16px; border-top:1px solid #e2e8f0; }
+.hero-stat { text-align:center; }
+.hero-stat-val { font-size:18px; font-weight:800; color:#0f3460; }
+.hero-stat-lbl { font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; }
 th.sortable { cursor:pointer; user-select:none; white-space:nowrap; }
 th.sortable:hover { background:#e2e8f0; }
 th.sortable.asc::after  { content:' ▲'; font-size:10px; color:#0f3460; }
@@ -277,6 +322,44 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
         <p id="dash-data-ref">Visão geral</p>
       </div>
     </div>
+    <!-- HERO VENDAS -->
+    <div class="vendas-hero">
+      <div class="hero-card">
+        <div class="hero-label" id="hero-mes-label">Faturamento — Mês Atual</div>
+        <div class="hero-value" id="hero-fat-valor">—</div>
+        <div class="hero-sub">vendas fechadas no mês</div>
+        <span class="hero-badge" id="hero-perc-badge">—% da meta</span>
+        <div class="progress-wrap">
+          <div class="progress-label">
+            <span>0</span>
+            <span id="hero-meta-label-bar">Meta</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="hero-progress-fill" style="width:0%;background:#e94560"></div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-meta-card">
+        <div class="hero-meta-label" id="hero-meta-mes-label">Meta — Mês Atual</div>
+        <div class="hero-meta-value" id="hero-meta-valor">R$ 50.000</div>
+        <div class="hero-meta-sub">objetivo mensal de faturamento</div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="hero-fat-ano">—</div>
+            <div class="hero-stat-lbl">Faturado no Ano</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="hero-pedidos-mes">—</div>
+            <div class="hero-stat-lbl">Pedidos no Mês</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="hero-ticket-medio">—</div>
+            <div class="hero-stat-lbl">Ticket Médio</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="cards">
       <div class="card blue"><div class="card-label">Equipamentos Ativos</div><div class="card-value" id="d-ativos">—</div><div class="card-sub">status ATIVO</div></div>
       <div class="card green"><div class="card-label">Contratos Vigentes</div><div class="card-value" id="d-contratos">—</div><div class="card-sub">contratos únicos</div></div>
@@ -999,6 +1082,43 @@ async function loadDashboard() {
   document.getElementById('d-calib').textContent = calibVenc.length.toLocaleString('pt-BR');
   document.getElementById('d-trein').textContent = treinVenc.length.toLocaleString('pt-BR');
   document.getElementById('dash-data-ref').textContent = `Atualizado em ${hoje.toLocaleDateString('pt-BR')}`;
+
+  // ── Hero Vendas ──────────────────────────────────────────
+  const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  const nomeMes = hoje.toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+  const META_MES = 50000;
+
+  const vendasMes = vendas.filter(v => v.fechamento?.startsWith(mesAtual));
+  const fatMes    = vendasMes.reduce((s, v) => s + (Number(v.valorVenda) || 0), 0);
+  const pedidosMes = vendasMes.length;
+  const ticketMedio = pedidosMes > 0 ? fatMes / pedidosMes : 0;
+
+  const anoAtual = String(hoje.getFullYear());
+  const fatAno = vendas.filter(v => v.fechamento?.startsWith(anoAtual))
+                       .reduce((s, v) => s + (Number(v.valorVenda) || 0), 0);
+
+  const perc = Math.min(Math.round((fatMes / META_MES) * 100), 100);
+  const percReal = Math.round((fatMes / META_MES) * 100);
+  const badgeClass = percReal >= 100 ? 'green' : percReal >= 60 ? 'orange' : 'red';
+  const fillColor  = percReal >= 100 ? '#34d399' : percReal >= 60 ? '#fbbf24' : '#f87171';
+
+  const mesLabel = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+  document.getElementById('hero-mes-label').textContent     = `Faturamento — ${mesLabel}`;
+  document.getElementById('hero-meta-mes-label').textContent = `Meta — ${mesLabel}`;
+  document.getElementById('hero-fat-valor').textContent     = fmtMoeda(fatMes);
+  document.getElementById('hero-meta-valor').textContent    = fmtMoeda(META_MES);
+  document.getElementById('hero-meta-label-bar').textContent = fmtMoeda(META_MES);
+  document.getElementById('hero-fat-ano').textContent       = fmtMoeda(fatAno);
+  document.getElementById('hero-pedidos-mes').textContent   = pedidosMes;
+  document.getElementById('hero-ticket-medio').textContent  = fmtMoeda(ticketMedio);
+
+  const badge = document.getElementById('hero-perc-badge');
+  badge.textContent = `${percReal}% da meta`;
+  badge.className = `hero-badge ${badgeClass}`;
+
+  const fill = document.getElementById('hero-progress-fill');
+  fill.style.width = perc + '%';
+  fill.style.background = fillColor;
 
   // Alertas
   const alertas = [];
