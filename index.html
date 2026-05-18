@@ -386,7 +386,12 @@ tbody tr:last-child td { border-bottom: none; }
           <div class="form-group"><label>Estado</label><input id="fc-estado" placeholder="Ex: Santa Catarina"></div>
           <div class="form-group"><label>UF</label><input id="fc-siglaEstado" placeholder="Ex: SC" maxlength="2" style="text-transform:uppercase"></div>
           <div class="form-group"><label>Região</label><input id="fc-regiao" placeholder="Ex: Grande Florianópolis"></div>
-          <div class="form-group full"><label>Endereço</label><input id="fc-endereco" placeholder="Rua, número, bairro (opcional)"></div>
+          <div class="form-group full"><label>Endereço</label><input id="fc-endereco" placeholder="Rua, número, bairro"></div>
+          <div class="form-group"><label>Inscrição Estadual</label><input id="fc-inscricaoEstadual" placeholder="IE"></div>
+          <div class="form-group"><label>Inscrição Municipal</label><input id="fc-inscricaoMunicipal" placeholder="IM"></div>
+          <div class="form-group"><label>Telefone</label><input id="fc-telefone" placeholder="(00) 00000-0000"></div>
+          <div class="form-group"><label>E-mail</label><input id="fc-email" type="email" placeholder="contato@empresa.com.br"></div>
+          <div class="form-group full"><label>Nome do Contato</label><input id="fc-nomeContato" placeholder="Responsável pelo contrato"></div>
           <div class="form-group full"><label>Observação</label><textarea id="fc-observacao" rows="2" style="resize:vertical;font-family:inherit;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:#f8fafc;width:100%;outline:none"></textarea></div>
         </div>
       </div>
@@ -412,6 +417,7 @@ tbody tr:last-child td { border-bottom: none; }
         </div>
       </div>
       <div id="modal-cli-detalhe-body">
+        <div id="detalhe-cli-info" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"></div>
         <div class="detail-tabs">
           <div class="detail-tab active" onclick="showClienteTab('contratos')">📋 Contratos</div>
           <div class="detail-tab" onclick="showClienteTab('equipamentos')">🔧 Equipamentos</div>
@@ -1152,6 +1158,25 @@ async function abrirDetalheCliente(cnpj) {
   document.getElementById('detalhe-cli-nome').textContent = nome;
   document.getElementById('detalhe-cli-sub').textContent = [cnpj, cidade, uf].filter(Boolean).join(' · ');
 
+  const infoFields = [
+    { label: 'CNPJ / CPF',          value: cnpj },
+    { label: 'Endereço',            value: cadastrado?.endereco },
+    { label: 'Cidade / UF',         value: [cidade, uf].filter(Boolean).join(' — ') || null },
+    { label: 'Inscrição Estadual',  value: cadastrado?.inscricaoEstadual },
+    { label: 'Inscrição Municipal', value: cadastrado?.inscricaoMunicipal },
+    { label: 'Telefone',            value: cadastrado?.telefone },
+    { label: 'E-mail',              value: cadastrado?.email },
+    { label: 'Nome do Contato',     value: cadastrado?.nomeContato },
+    { label: 'Observação',          value: cadastrado?.observacao },
+  ].filter(f => f.value);
+  document.getElementById('detalhe-cli-info').innerHTML = infoFields.length
+    ? infoFields.map(f => `
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">${f.label}</div>
+          <div style="font-size:13px;color:#1e293b;font-weight:500">${f.value}</div>
+        </div>`).join('')
+    : '<div style="color:#94a3b8;font-size:13px;grid-column:1/-1">Nenhuma informação cadastrada. Clique em ✏️ Editar para preencher.</div>';
+
   const grupos = new Map();
   equips.forEach(e => {
     const key = e.contrato || '(sem contrato)';
@@ -1243,7 +1268,7 @@ function showClienteTab(tab) {
 function abrirFormCliente(id = null) {
   document.getElementById('modal-cli-titulo').textContent = id ? 'Editar Cliente' : 'Novo Cliente';
   document.getElementById('btn-excluir-cliente').style.display = id ? 'inline-block' : 'none';
-  ['id','razaoSocial','cnpj','cidade','estado','siglaEstado','regiao','endereco','observacao'].forEach(f => {
+  ['id','razaoSocial','cnpj','cidade','estado','siglaEstado','regiao','endereco','inscricaoEstadual','inscricaoMunicipal','telefone','email','nomeContato','observacao'].forEach(f => {
     const el = document.getElementById('fc-' + f);
     if (el) el.value = '';
   });
@@ -1257,7 +1282,7 @@ async function abrirFormClienteComDados(id) {
   if (!c) return;
   abrirFormCliente(id);
   document.getElementById('fc-id').value = c.id;
-  ['razaoSocial','cnpj','cidade','estado','siglaEstado','regiao','endereco','observacao'].forEach(f => {
+  ['razaoSocial','cnpj','cidade','estado','siglaEstado','regiao','endereco','inscricaoEstadual','inscricaoMunicipal','telefone','email','nomeContato','observacao'].forEach(f => {
     const el = document.getElementById('fc-' + f);
     if (el && c[f]) el.value = c[f];
   });
@@ -1289,6 +1314,11 @@ async function salvarCliente() {
     siglaEstado: document.getElementById('fc-siglaEstado').value.trim().toUpperCase() || null,
     regiao: document.getElementById('fc-regiao').value.trim() || null,
     endereco: document.getElementById('fc-endereco').value.trim() || null,
+    inscricaoEstadual: document.getElementById('fc-inscricaoEstadual').value.trim() || null,
+    inscricaoMunicipal: document.getElementById('fc-inscricaoMunicipal').value.trim() || null,
+    telefone: document.getElementById('fc-telefone').value.trim() || null,
+    email: document.getElementById('fc-email').value.trim() || null,
+    nomeContato: document.getElementById('fc-nomeContato').value.trim() || null,
     observacao: document.getElementById('fc-observacao').value.trim() || null,
   };
 
