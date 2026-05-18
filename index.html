@@ -406,6 +406,84 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
   .card .card-value { font-size:22px; }
 }
 
+/* ── CRM ────────────────────────────────────────────── */
+.crm-top-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px; }
+.crm-field-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; }
+.crm-field-card > label { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px; }
+.crm-field-card select, .crm-field-card input[type=text], .crm-field-card input[type=date] {
+  width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:7px;
+  font-size:13px; background:white; margin-bottom:8px; font-family:inherit; color:#1e293b;
+}
+.crm-section { margin-bottom:22px; }
+.crm-section-title {
+  font-size:11px; font-weight:700; color:#0f3460; text-transform:uppercase;
+  letter-spacing:0.5px; margin-bottom:10px; padding-bottom:8px;
+  border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between;
+}
+.crm-add-form {
+  background:#f0f4ff; border:1px solid #c7d7fe; border-radius:10px;
+  padding:12px; margin-bottom:12px; display:none;
+}
+.crm-add-form.open { display:block; }
+.crm-add-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+.crm-add-row.cols3 { grid-template-columns:auto 1fr auto; }
+.crm-add-form input, .crm-add-form select, .crm-add-form textarea {
+  width:100%; padding:8px 10px; border:1px solid #c7d7fe; border-radius:7px;
+  font-size:13px; background:white; font-family:inherit; color:#1e293b;
+}
+.crm-add-form textarea { min-height:60px; resize:vertical; }
+/* Timeline */
+.timeline-wrap { display:flex; flex-direction:column; gap:0; }
+.timeline-item {
+  display:flex; gap:12px; padding:10px 0;
+  border-bottom:1px solid #f1f5f9; position:relative;
+}
+.timeline-item:last-child { border-bottom:none; }
+.timeline-icon {
+  width:32px; height:32px; border-radius:50%; background:#f1f5f9;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; flex-shrink:0; margin-top:2px;
+}
+.timeline-body { flex:1; }
+.timeline-desc { font-size:13px; color:#1e293b; font-weight:500; }
+.timeline-meta { font-size:11px; color:#94a3b8; margin-top:2px; }
+.timeline-del { background:none; border:none; color:#cbd5e1; cursor:pointer; font-size:16px; padding:2px 6px; border-radius:4px; }
+.timeline-del:hover { color:#e94560; background:#fee2e2; }
+/* Oportunidades */
+.oport-card {
+  background:white; border:1px solid #e2e8f0; border-radius:10px;
+  padding:14px 16px; margin-bottom:8px; display:flex; align-items:flex-start;
+  gap:12px; transition:border-color 0.15s;
+}
+.oport-card:hover { border-color:#93c5fd; }
+.oport-info { flex:1; }
+.oport-titulo { font-size:13px; font-weight:700; color:#1e293b; }
+.oport-valor { font-size:13px; font-weight:700; color:#0f3460; margin-top:2px; }
+.oport-meta  { font-size:11px; color:#94a3b8; margin-top:3px; }
+.oport-actions { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+.etapa-sel { padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:11px; font-weight:600; background:#f8fafc; color:#475569; cursor:pointer; }
+.etapa-sel:focus { outline:none; border-color:#0f3460; }
+/* Status badges de relacionamento */
+.rel-badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:700; }
+.rel-Prospect    { background:#f0f9ff; color:#0369a1; }
+.rel-Ativo       { background:#dcfce7; color:#166534; }
+.rel-negociacao  { background:#fef3c7; color:#92400e; }
+.rel-risco       { background:#fee2e2; color:#991b1b; }
+.rel-Inativo     { background:#f1f5f9; color:#64748b; }
+/* Banner próxima ação */
+.proxima-acao-banner {
+  display:flex; align-items:center; gap:10px;
+  background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;
+  padding:10px 14px; margin-bottom:16px; font-size:13px;
+}
+.proxima-acao-banner.atrasada { background:#fff7ed; border-color:#fed7aa; }
+.proxima-acao-banner.hoje { background:#eff6ff; border-color:#bfdbfe; }
+@media (max-width:768px) {
+  .crm-top-row { grid-template-columns:1fr; }
+  .crm-add-row { grid-template-columns:1fr; }
+  .crm-add-row.cols3 { grid-template-columns:1fr; }
+}
+
 /* ── Radar Cidades ──────────────────────────────────── */
 .rc-layout {
   display:grid; grid-template-columns:1fr 320px; gap:0;
@@ -760,6 +838,7 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
         <div>
           <h3 id="detalhe-cli-nome" style="color:#0f3460;font-size:18px;font-weight:700"></h3>
           <p id="detalhe-cli-sub" style="color:#64748b;font-size:13px;margin-top:4px"></p>
+          <div id="detalhe-cli-status-row" style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <button class="btn-ghost" onclick="editarClienteAtual()">✏️ Editar</button>
@@ -773,6 +852,7 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
           <div class="detail-tab" onclick="showClienteTab('contratos')" id="cli-tab-contratos">📋 Contratos</div>
           <div class="detail-tab" onclick="showClienteTab('equipamentos')" id="cli-tab-equipamentos">🔧 Equipamentos</div>
           <div class="detail-tab" onclick="showClienteTab('consumo')" id="cli-tab-consumo">📦 Consumo</div>
+          <div class="detail-tab" onclick="showClienteTab('crm')" id="cli-tab-crm">🎯 CRM</div>
         </div>
         <div id="cli-panel-contratos" class="detail-panel">
           <div class="table-scroll"><table>
@@ -810,6 +890,100 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
             <thead><tr><th>Período</th><th>Nº Equipos</th><th>Consumo Equipos</th><th>Nº Seringas</th><th>Consumo Seringas</th><th>Classificação</th></tr></thead>
             <tbody id="cli-tbody-consumo"></tbody>
           </table></div>
+        </div>
+        <div id="cli-panel-crm" class="detail-panel">
+          <!-- Banner próxima ação (dentro do painel) -->
+          <div id="crm-proxima-banner" style="display:none" class="proxima-acao-banner">
+            <span style="font-size:18px" id="crm-prox-icon">📅</span>
+            <div>
+              <div style="font-weight:700;color:#166534" id="crm-prox-titulo">Próxima Ação</div>
+              <div style="color:#4ade80;font-size:12px" id="crm-prox-detalhe"></div>
+            </div>
+          </div>
+
+          <!-- Status + Próxima Ação form -->
+          <div class="crm-top-row">
+            <div class="crm-field-card">
+              <label>Status do Relacionamento</label>
+              <select id="crm-status-sel">
+                <option value="">Selecione...</option>
+                <option value="Prospect">Prospect</option>
+                <option value="Ativo">Ativo</option>
+                <option value="Em Negociação">Em Negociação</option>
+                <option value="Em Risco">Em Risco</option>
+                <option value="Inativo">Inativo</option>
+              </select>
+              <button class="btn btn-primary" style="width:100%;font-size:12px;padding:7px" onclick="salvarCrmCampos()">Salvar Status</button>
+            </div>
+            <div class="crm-field-card">
+              <label>Próxima Ação Agendada</label>
+              <input type="date" id="crm-prox-data">
+              <input type="text" id="crm-prox-desc" placeholder="Ex: Ligar para renovação...">
+              <button class="btn btn-primary" style="width:100%;font-size:12px;padding:7px" onclick="salvarCrmCampos()">Salvar Ação</button>
+            </div>
+          </div>
+
+          <!-- Anotações -->
+          <div class="crm-section">
+            <div class="crm-section-title">📝 Anotações</div>
+            <textarea id="crm-anotacoes" class="crm-add-form open" style="width:100%;min-height:90px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;background:#f8fafc" placeholder="Anotações sobre este cliente..."></textarea>
+            <button class="btn btn-primary" style="margin-top:8px;font-size:12px;padding:7px 16px" onclick="salvarAnotacoes()">Salvar Anotações</button>
+          </div>
+
+          <!-- Timeline -->
+          <div class="crm-section">
+            <div class="crm-section-title">
+              <span>🕐 Timeline de Atividades</span>
+              <button class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="toggleCrmForm('add-atv-form')">+ Registrar</button>
+            </div>
+            <div id="add-atv-form" class="crm-add-form">
+              <div class="crm-add-row cols3">
+                <select id="atv-tipo" style="padding:8px;border:1px solid #c7d7fe;border-radius:7px;font-size:13px;background:white">
+                  <option value="📞">📞 Ligação</option>
+                  <option value="🤝">🤝 Visita</option>
+                  <option value="📧">📧 Email</option>
+                  <option value="📅">📅 Reunião</option>
+                  <option value="📝">📝 Nota</option>
+                </select>
+                <input type="text" id="atv-desc" placeholder="Descrição da atividade...">
+                <input type="date" id="atv-data">
+              </div>
+              <button class="btn btn-primary" style="width:100%;font-size:12px;padding:7px" onclick="adicionarAtividade()">Adicionar à Timeline</button>
+            </div>
+            <div class="timeline-wrap" id="crm-timeline">
+              <div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">Nenhuma atividade registrada</div>
+            </div>
+          </div>
+
+          <!-- Pipeline -->
+          <div class="crm-section">
+            <div class="crm-section-title">
+              <span>🎯 Pipeline de Oportunidades</span>
+              <button class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="toggleCrmForm('add-oport-form')">+ Nova</button>
+            </div>
+            <div id="add-oport-form" class="crm-add-form">
+              <div class="crm-add-row">
+                <input type="text" id="oport-titulo" placeholder="Título da oportunidade...">
+                <input type="text" id="oport-valor" placeholder="Valor estimado (R$)">
+              </div>
+              <div class="crm-add-row">
+                <select id="oport-etapa" style="padding:8px;border:1px solid #c7d7fe;border-radius:7px;font-size:13px;background:white">
+                  <option value="Prospecção">Prospecção</option>
+                  <option value="Qualificação">Qualificação</option>
+                  <option value="Proposta">Proposta</option>
+                  <option value="Negociação">Negociação</option>
+                  <option value="Ganho">Ganho ✓</option>
+                  <option value="Perdido">Perdido ✗</option>
+                </select>
+                <input type="date" id="oport-fechamento" placeholder="Previsão de fechamento">
+              </div>
+              <textarea id="oport-desc" placeholder="Descrição / observações..." style="width:100%;min-height:50px;padding:8px;border:1px solid #c7d7fe;border-radius:7px;font-size:13px;font-family:inherit;margin-bottom:8px"></textarea>
+              <button class="btn btn-primary" style="width:100%;font-size:12px;padding:7px" onclick="adicionarOportunidade()">Adicionar Oportunidade</button>
+            </div>
+            <div id="crm-pipeline">
+              <div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">Nenhuma oportunidade cadastrada</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1346,6 +1520,8 @@ const db = {
   metas:        new FSCollection('metas'),
   clientes:     new FSCollection('clientes'),
   insumos:      new FSCollection('insumos'),
+  atividades:   new FSCollection('atividades'),
+  oportunidades: new FSCollection('oportunidades'),
 };
 
 // ============================================================
@@ -1698,7 +1874,7 @@ async function renderClientes(pag) {
 
   tbody.innerHTML = pagina.map(c => `
     <tr style="cursor:pointer" onclick="abrirDetalheCliente('${(c.cnpj||'').replace(/'/g,"\\'")}')">
-      <td><strong>${c.razaoSocial || '—'}</strong></td>
+      <td><strong>${c.razaoSocial || '—'}</strong>${c.statusRelacionamento ? ` <span class="rel-badge rel-${c.statusRelacionamento.replace(/ /g,'')}" style="font-size:10px">${c.statusRelacionamento}</span>` : ''}</td>
       <td style="font-size:12px">${c.cnpj || '—'}</td>
       <td>${c.cidade || '—'}</td>
       <td style="text-align:center">${c.siglaEstado || '—'}</td>
@@ -1726,6 +1902,12 @@ async function abrirDetalheCliente(cnpj) {
   const uf = cadastrado?.siglaEstado || equips[0]?.siglaEstado || '';
   clienteAtualId = cadastrado?.id || null;
 
+  // Carrega dados CRM
+  const [atividadesCli, oportunidadesCli] = await Promise.all([
+    db.atividades.where('cnpj').equals(cnpj).toArray(),
+    db.oportunidades.where('cnpj').equals(cnpj).toArray(),
+  ]);
+
   document.getElementById('detalhe-cli-nome').textContent = nome;
   document.getElementById('detalhe-cli-sub').textContent = [cnpj, cidade, uf].filter(Boolean).join(' · ');
 
@@ -1745,6 +1927,34 @@ async function abrirDetalheCliente(cnpj) {
       <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">${f.label}</div>
       <div style="font-size:13px;color:${f.value ? '#1e293b' : '#cbd5e1'};font-weight:500">${f.value || '—'}</div>
     </div>`).join('');
+
+  // Status de relacionamento no header
+  const statusRel = cadastrado?.statusRelacionamento || '';
+  const proxData = cadastrado?.proximaAcaoData || '';
+  const proxDesc = cadastrado?.proximaAcaoDesc || '';
+  const statusRow = document.getElementById('detalhe-cli-status-row');
+  statusRow.innerHTML = statusRel
+    ? `<span class="rel-badge rel-${statusRel.replace(' ','')}">${statusRel}</span>`
+    : '';
+  if (proxData) {
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const d = new Date(proxData + 'T00:00:00');
+    const diff = Math.round((d - hoje) / 86400000);
+    const isAtrasada = diff < 0;
+    const isHoje = diff === 0;
+    const icon = isAtrasada ? '⚠️' : isHoje ? '🔔' : '📅';
+    const label = isAtrasada ? `Atrasada (${fmtDate(proxData)})` : isHoje ? 'Hoje' : `Em ${diff} dia${diff !== 1 ? 's' : ''} (${fmtDate(proxData)})`;
+    statusRow.innerHTML += ` <span style="font-size:12px;color:${isAtrasada ? '#dc2626' : '#0f3460'}">${icon} ${label} — ${proxDesc}</span>`;
+  }
+
+  // Preenche formulário CRM
+  document.getElementById('crm-status-sel').value = statusRel;
+  document.getElementById('crm-prox-data').value = proxData;
+  document.getElementById('crm-prox-desc').value = proxDesc;
+  document.getElementById('crm-anotacoes').value = cadastrado?.anotacoes || '';
+
+  renderCrmTimeline(atividadesCli);
+  renderCrmPipeline(oportunidadesCli);
 
   // Alertas nas abas
   const alertaContratos    = equips.some(e => isVencidoVigente(e) || isVencido(e.vencCalib) || isVencido(e.vencTrein));
@@ -1870,7 +2080,7 @@ function renderCliContratos() {
 }
 
 function showClienteTab(tab) {
-  ['vendas','contratos','equipamentos','consumo'].forEach(t => {
+  ['vendas','contratos','equipamentos','consumo','crm'].forEach(t => {
     document.getElementById('cli-tab-' + t)?.classList.toggle('active', t === tab);
     document.getElementById('cli-panel-' + t)?.classList.toggle('active', t === tab);
   });
@@ -3111,6 +3321,162 @@ async function fazerLogin() {
 async function fazerLogout() {
   if (!confirm('Deseja sair do sistema?')) return;
   await firebase.auth().signOut();
+}
+
+// ============================================================
+// CRM
+// ============================================================
+let crmCnpjAtual = null; // set when modal opens — same as clienteAtualCnpj
+
+function toggleCrmForm(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+function relBadgeClass(status) {
+  const map = { 'Prospect':'Prospect','Ativo':'Ativo','Em Negociação':'negociacao','Em Risco':'risco','Inativo':'Inativo' };
+  return map[status] || '';
+}
+
+async function salvarCrmCampos() {
+  const cnpj = clienteAtualCnpj;
+  if (!cnpj) return;
+  const status = document.getElementById('crm-status-sel').value;
+  const proxData = document.getElementById('crm-prox-data').value;
+  const proxDesc = document.getElementById('crm-prox-desc').value;
+  const dados = { statusRelacionamento: status, proximaAcaoData: proxData, proximaAcaoDesc: proxDesc };
+  const cadastrado = await db.clientes.where('cnpj').equals(cnpj).first();
+  if (cadastrado?.id) {
+    await db.clientes.update(cadastrado.id, dados);
+  } else {
+    await db.clientes.add({ cnpj, ...dados });
+  }
+  // Atualiza header
+  const statusRow = document.getElementById('detalhe-cli-status-row');
+  statusRow.innerHTML = status ? `<span class="rel-badge rel-${status.replace(/ /g,'')}">${status}</span>` : '';
+  if (proxData) {
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const d = new Date(proxData + 'T00:00:00');
+    const diff = Math.round((d - hoje) / 86400000);
+    const isAtrasada = diff < 0;
+    const icon = isAtrasada ? '⚠️' : diff === 0 ? '🔔' : '📅';
+    const label = isAtrasada ? `Atrasada (${fmtDate(proxData)})` : diff === 0 ? 'Hoje' : `Em ${diff} dia${diff !== 1 ? 's' : ''} (${fmtDate(proxData)})`;
+    statusRow.innerHTML += ` <span style="font-size:12px;color:${isAtrasada ? '#dc2626' : '#0f3460'}">${icon} ${label} — ${proxDesc}</span>`;
+  }
+  alert('Salvo!');
+}
+
+async function salvarAnotacoes() {
+  const cnpj = clienteAtualCnpj;
+  if (!cnpj) return;
+  const anotacoes = document.getElementById('crm-anotacoes').value;
+  const cadastrado = await db.clientes.where('cnpj').equals(cnpj).first();
+  if (cadastrado?.id) {
+    await db.clientes.update(cadastrado.id, { anotacoes });
+  } else {
+    await db.clientes.add({ cnpj, anotacoes });
+  }
+  alert('Anotações salvas!');
+}
+
+const TIPO_ICONS = { '📞':'📞', '🤝':'🤝', '📧':'📧', '📅':'📅', '📝':'📝' };
+
+async function adicionarAtividade() {
+  const cnpj = clienteAtualCnpj;
+  if (!cnpj) return;
+  const tipo  = document.getElementById('atv-tipo').value;
+  const desc  = document.getElementById('atv-desc').value.trim();
+  const data  = document.getElementById('atv-data').value;
+  if (!desc) { alert('Informe a descrição.'); return; }
+  await db.atividades.add({ cnpj, tipo, descricao: desc, data: data || new Date().toISOString().slice(0,10), criadoEm: new Date().toISOString() });
+  document.getElementById('atv-desc').value = '';
+  document.getElementById('atv-data').value = '';
+  const todas = await db.atividades.where('cnpj').equals(cnpj).toArray();
+  renderCrmTimeline(todas);
+  document.getElementById('add-atv-form').classList.remove('open');
+}
+
+async function excluirAtividade(id) {
+  if (!confirm('Excluir esta atividade?')) return;
+  await db.atividades.delete(id);
+  const todas = await db.atividades.where('cnpj').equals(clienteAtualCnpj).toArray();
+  renderCrmTimeline(todas);
+}
+
+function renderCrmTimeline(atividades) {
+  const sorted = [...atividades].sort((a, b) => (b.data || b.criadoEm || '').localeCompare(a.data || a.criadoEm || ''));
+  document.getElementById('crm-timeline').innerHTML = sorted.length === 0
+    ? '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">Nenhuma atividade registrada</div>'
+    : '<div class="timeline-wrap">' + sorted.map(a => `
+        <div class="timeline-item">
+          <div class="timeline-icon">${a.tipo || '📝'}</div>
+          <div class="timeline-body">
+            <div class="timeline-desc">${a.descricao || '—'}</div>
+            <div class="timeline-meta">${fmtDate(a.data)} · ${a.tipo === '📞' ? 'Ligação' : a.tipo === '🤝' ? 'Visita' : a.tipo === '📧' ? 'Email' : a.tipo === '📅' ? 'Reunião' : 'Nota'}</div>
+          </div>
+          <button class="timeline-del" onclick="excluirAtividade('${a.id}')">✕</button>
+        </div>`).join('') + '</div>';
+}
+
+const ETAPA_COLORS = { 'Prospecção':'#dbeafe|#1e40af', 'Qualificação':'#fef3c7|#92400e', 'Proposta':'#e0e7ff|#3730a3', 'Negociação':'#ffedd5|#c2410c', 'Ganho':'#dcfce7|#166534', 'Perdido':'#fee2e2|#991b1b' };
+
+async function adicionarOportunidade() {
+  const cnpj = clienteAtualCnpj;
+  if (!cnpj) return;
+  const titulo = document.getElementById('oport-titulo').value.trim();
+  const valor  = document.getElementById('oport-valor').value.trim();
+  const etapa  = document.getElementById('oport-etapa').value;
+  const fechamento = document.getElementById('oport-fechamento').value;
+  const desc   = document.getElementById('oport-desc').value.trim();
+  if (!titulo) { alert('Informe o título da oportunidade.'); return; }
+  await db.oportunidades.add({ cnpj, titulo, valor, etapa, dataFechamento: fechamento, descricao: desc, criadoEm: new Date().toISOString() });
+  document.getElementById('oport-titulo').value = '';
+  document.getElementById('oport-valor').value = '';
+  document.getElementById('oport-desc').value = '';
+  const todas = await db.oportunidades.where('cnpj').equals(cnpj).toArray();
+  renderCrmPipeline(todas);
+  document.getElementById('add-oport-form').classList.remove('open');
+}
+
+async function mudarEtapaOport(id, novaEtapa) {
+  await db.oportunidades.update(id, { etapa: novaEtapa });
+  const todas = await db.oportunidades.where('cnpj').equals(clienteAtualCnpj).toArray();
+  renderCrmPipeline(todas);
+}
+
+async function excluirOportunidade(id) {
+  if (!confirm('Excluir esta oportunidade?')) return;
+  await db.oportunidades.delete(id);
+  const todas = await db.oportunidades.where('cnpj').equals(clienteAtualCnpj).toArray();
+  renderCrmPipeline(todas);
+}
+
+function renderCrmPipeline(oportunidades) {
+  const etapas = ['Prospecção','Qualificação','Proposta','Negociação','Ganho','Perdido'];
+  const sorted = [...oportunidades].sort((a, b) => {
+    return etapas.indexOf(a.etapa) - etapas.indexOf(b.etapa) || (b.criadoEm||'').localeCompare(a.criadoEm||'');
+  });
+  document.getElementById('crm-pipeline').innerHTML = sorted.length === 0
+    ? '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">Nenhuma oportunidade cadastrada</div>'
+    : sorted.map(o => {
+        const [bg, fg] = (ETAPA_COLORS[o.etapa] || '#f1f5f9|#475569').split('|');
+        const valorFmt = o.valor ? `R$ ${Number(String(o.valor).replace(/[^0-9.]/g,'')) > 0 ? Number(String(o.valor).replace(/[^0-9.]/g,'')).toLocaleString('pt-BR',{minimumFractionDigits:0}) : o.valor}` : '';
+        return `<div class="oport-card">
+          <div class="oport-info">
+            <div class="oport-titulo">${o.titulo}</div>
+            ${valorFmt ? `<div class="oport-valor">${valorFmt}</div>` : ''}
+            ${o.descricao ? `<div class="oport-meta">${o.descricao}</div>` : ''}
+            ${o.dataFechamento ? `<div class="oport-meta">📅 Fechamento: ${fmtDate(o.dataFechamento)}</div>` : ''}
+          </div>
+          <div class="oport-actions">
+            <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${bg};color:${fg}">${o.etapa}</span>
+            <select class="etapa-sel" onchange="mudarEtapaOport('${o.id}', this.value)">
+              ${['Prospecção','Qualificação','Proposta','Negociação','Ganho','Perdido'].map(e => `<option value="${e}" ${e===o.etapa?'selected':''}>${e}</option>`).join('')}
+            </select>
+            <button class="timeline-del" onclick="excluirOportunidade('${o.id}')">🗑</button>
+          </div>
+        </div>`;
+      }).join('');
 }
 
 // ============================================================
