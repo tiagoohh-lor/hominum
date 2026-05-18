@@ -1,0 +1,2291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STR Sistema</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #1a1a2e; display: flex; min-height: 100vh; }
+
+#sidebar {
+  width: 220px; min-height: 100vh; background: #0f3460; color: white;
+  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; z-index: 100;
+}
+#sidebar .logo { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 18px; font-weight: 700; letter-spacing: 1px; }
+#sidebar .logo span { color: #e94560; }
+#sidebar nav { flex: 1; padding: 16px 0; }
+#sidebar nav a {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 20px; color: rgba(255,255,255,0.7); text-decoration: none;
+  font-size: 14px; transition: all 0.2s; cursor: pointer;
+  border-left: 3px solid transparent;
+}
+#sidebar nav a:hover, #sidebar nav a.active { background: rgba(255,255,255,0.1); color: white; border-left-color: #e94560; }
+#sidebar nav a .icon { font-size: 18px; width: 24px; text-align: center; }
+#sidebar .version { padding: 16px 20px; font-size: 11px; color: rgba(255,255,255,0.3); border-top: 1px solid rgba(255,255,255,0.1); }
+
+#main { margin-left: 220px; flex: 1; padding: 24px; }
+.page { display: none; }
+.page.active { display: block; }
+
+.page-header { margin-bottom: 24px; display: flex; align-items: flex-start; justify-content: space-between; }
+.page-header-text h1 { font-size: 22px; font-weight: 700; color: #0f3460; }
+.page-header-text p { color: #666; font-size: 14px; margin-top: 4px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: relative; overflow: hidden; }
+.card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.card.blue::before { background: #0f3460; }
+.card.red::before { background: #e94560; }
+.card.green::before { background: #10b981; }
+.card.orange::before { background: #f59e0b; }
+.card.purple::before { background: #8b5cf6; }
+.card .card-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.card .card-value { font-size: 26px; font-weight: 700; color: #0f3460; line-height: 1; }
+.card .card-sub { font-size: 11px; color: #aaa; margin-top: 6px; }
+
+.charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+.chart-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.chart-box h3 { font-size: 13px; font-weight: 600; color: #0f3460; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+.table-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 16px; }
+.table-box h3 { font-size: 13px; font-weight: 600; color: #0f3460; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.3px; }
+.table-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.table-toolbar input, .table-toolbar select {
+  padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px;
+  background: #f8fafc; outline: none; transition: border-color 0.2s; color: #333;
+}
+.table-toolbar input:focus, .table-toolbar select:focus { border-color: #0f3460; background: white; }
+.table-toolbar input[type=text] { flex: 1; min-width: 200px; }
+.table-count { font-size: 12px; color: #999; margin-left: auto; align-self: center; white-space: nowrap; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { background: #f8fafc; padding: 10px 12px; text-align: left; font-weight: 600; color: #64748b; border-bottom: 2px solid #e2e8f0; white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+tbody td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+tbody tr:hover { background: #f8faff; }
+tbody tr:last-child td { border-bottom: none; }
+
+.badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badge-green { background: #dcfce7; color: #166534; }
+.badge-red { background: #fee2e2; color: #991b1b; }
+.badge-orange { background: #fef3c7; color: #92400e; }
+.badge-blue { background: #dbeafe; color: #1e40af; }
+.badge-purple { background: #ede9fe; color: #5b21b6; }
+.badge-gray { background: #f1f5f9; color: #475569; }
+
+.pagination { display: flex; gap: 4px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+.pagination button { padding: 6px 10px; border: 1px solid #e2e8f0; background: white; border-radius: 6px; cursor: pointer; font-size: 12px; color: #555; transition: all 0.15s; }
+.pagination button.active { background: #0f3460; color: white; border-color: #0f3460; }
+.pagination button:hover:not(.active):not(:disabled) { background: #f1f5f9; }
+.pagination button:disabled { opacity: 0.4; cursor: default; }
+
+#drop-zone { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 56px 24px; text-align: center; cursor: pointer; transition: all 0.2s; background: #f8fafc; }
+#drop-zone:hover, #drop-zone.drag-over { border-color: #0f3460; background: #eef2ff; }
+#drop-zone .drop-icon { font-size: 56px; margin-bottom: 16px; }
+#drop-zone p { color: #475569; margin-bottom: 6px; font-size: 15px; }
+#drop-zone span { font-size: 12px; color: #94a3b8; }
+
+#import-log { margin-top: 16px; padding: 16px; background: #0d1117; color: #7ee787; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 280px; overflow-y: auto; display: none; line-height: 1.6; }
+
+#detalhe-equip { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-top: 16px; display: none; border-top: 3px solid #0f3460; }
+.detalhe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+.detalhe-field label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+.detalhe-field span { font-size: 14px; color: #1e293b; font-weight: 500; }
+
+.no-data { text-align: center; padding: 48px; color: #94a3b8; }
+.no-data .no-data-icon { font-size: 40px; margin-bottom: 12px; }
+.no-data p { font-size: 14px; }
+
+.table-scroll { overflow-x: auto; }
+.td-ellipsis { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.btn { padding: 9px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: opacity 0.2s; }
+.btn-primary { background: #0f3460; color: white; }
+.btn-primary:hover { opacity: 0.85; }
+.btn-danger { background: #e94560; color: white; }
+.btn-danger:hover { opacity: 0.85; }
+
+.welcome-box { text-align: center; padding: 64px 24px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.welcome-box .welcome-icon { font-size: 72px; margin-bottom: 20px; }
+.welcome-box h2 { color: #0f3460; font-size: 24px; margin-bottom: 10px; }
+.welcome-box p { color: #64748b; margin-bottom: 28px; font-size: 15px; }
+
+/* Modal */
+#modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center; }
+#modal-overlay.open { display:flex; }
+#modal-box {
+  background:white; border-radius:16px; width:760px; max-width:95vw;
+  max-height:92vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.25);
+}
+#modal-header {
+  padding:20px 24px; border-bottom:1px solid #e2e8f0;
+  display:flex; align-items:center; justify-content:space-between;
+}
+#modal-header h2 { font-size:16px; color:#0f3460; font-weight:700; }
+#modal-header button { background:none; border:none; font-size:20px; cursor:pointer; color:#94a3b8; line-height:1; padding:4px; }
+#modal-header button:hover { color:#475569; }
+#modal-body { padding:24px; overflow-y:auto; flex:1; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.form-grid.cols3 { grid-template-columns:1fr 1fr 1fr; }
+.form-group { display:flex; flex-direction:column; gap:5px; }
+.form-group.full { grid-column:1/-1; }
+.form-group label { font-size:11px; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:0.4px; }
+.form-group input, .form-group select, .form-group textarea {
+  padding:9px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px;
+  background:#f8fafc; color:#1e293b; outline:none; transition:border-color 0.2s, background 0.2s;
+  font-family:inherit;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:#0f3460; background:white; }
+.form-group input[readonly] { background:#f1f5f9; color:#64748b; cursor:default; }
+.form-section-title { font-size:11px; font-weight:700; color:#0f3460; text-transform:uppercase; letter-spacing:0.5px; padding:4px 0 2px; border-bottom:1px solid #e2e8f0; margin-bottom:4px; grid-column:1/-1; }
+#modal-footer { padding:16px 24px; border-top:1px solid #e2e8f0; display:flex; gap:8px; justify-content:flex-end; }
+.btn-ghost { background:#f1f5f9; color:#475569; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:500; }
+.btn-ghost:hover { background:#e2e8f0; }
+/* Tabs do detalhe */
+.detail-tabs { display:flex; gap:0; border-bottom:2px solid #e2e8f0; margin-bottom:20px; }
+.detail-tab { padding:10px 18px; font-size:13px; font-weight:600; color:#64748b; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.15s; }
+.detail-tab:hover { color:#0f3460; }
+.detail-tab.active { color:#0f3460; border-bottom-color:#0f3460; }
+.detail-panel { display:none; }
+.detail-panel.active { display:block; }
+/* LOGIN */
+#login-overlay {
+  position:fixed; inset:0; background:#0f3460; z-index:9999;
+  display:flex; align-items:center; justify-content:center;
+}
+#login-box {
+  background:white; border-radius:16px; padding:40px;
+  width:380px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,0.4);
+}
+.login-logo { font-size:26px; font-weight:800; letter-spacing:1px; color:#0f3460; margin-bottom:6px; }
+.login-logo span { color:#e94560; }
+.login-sub { font-size:13px; color:#64748b; margin-bottom:24px; }
+#login-box .form-group { margin-bottom:16px; }
+#login-box .form-group label { display:block; font-size:12px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
+#login-box .form-group input { width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; outline:none; }
+#login-box .form-group input:focus { border-color:#0f3460; }
+/* Sidebar user */
+.sidebar-user {
+  padding:12px 20px; border-top:1px solid rgba(255,255,255,0.1);
+  font-size:12px; color:rgba(255,255,255,0.6); display:flex; flex-direction:column; gap:6px;
+}
+.sidebar-user strong { color:white; font-size:13px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.btn-logout {
+  background:rgba(233,69,96,0.15); color:#e94560; border:1px solid rgba(233,69,96,0.3);
+  padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;
+  text-align:left; width:100%;
+}
+.btn-logout:hover { background:rgba(233,69,96,0.3); }
+</style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div id="login-overlay">
+  <div id="login-box">
+    <div class="login-logo">STR <span>Sistema</span></div>
+    <p class="login-sub">Acesso restrito — faça login para continuar</p>
+    <div class="form-group">
+      <label>E-mail</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')fazerLogin()">
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()">
+    </div>
+    <div id="login-erro" style="color:#e94560;font-size:13px;min-height:18px;margin-bottom:8px"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="fazerLogin()">Entrar</button>
+  </div>
+</div>
+
+<div id="sidebar">
+  <div class="logo">STR <span>Sistema</span></div>
+  <nav>
+    <a class="active" onclick="showPage('dashboard')"><span class="icon">📊</span> Dashboard</a>
+    <a onclick="showPage('clientes')"><span class="icon">👥</span> Clientes</a>
+    <a onclick="showPage('contratos')"><span class="icon">📋</span> Contratos</a>
+    <a onclick="showPage('rastreabilidade')"><span class="icon">🔍</span> Rastreabilidade</a>
+    <a onclick="showPage('vendas')"><span class="icon">💰</span> Radar de Vendas</a>
+    <a onclick="showPage('consumo')"><span class="icon">📦</span> Consumo</a>
+    <a onclick="showPage('importar')"><span class="icon">📤</span> Importar Dados</a>
+  </nav>
+  <div class="sidebar-user" id="sidebar-user-info" style="display:none">
+    <strong id="sidebar-user-email"></strong>
+    <button class="btn-logout" onclick="fazerLogout()">⏻ Sair</button>
+  </div>
+  <div class="version">STR Sistema v1.0</div>
+</div>
+
+<div id="main">
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="page active">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>Dashboard</h1>
+        <p id="dash-data-ref">Visão geral</p>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card blue"><div class="card-label">Equipamentos Ativos</div><div class="card-value" id="d-ativos">—</div><div class="card-sub">status ATIVO</div></div>
+      <div class="card green"><div class="card-label">Contratos Vigentes</div><div class="card-value" id="d-contratos">—</div><div class="card-sub">contratos únicos</div></div>
+      <div class="card purple"><div class="card-label">Clientes Ativos</div><div class="card-value" id="d-clientes">—</div><div class="card-sub">com equipamento</div></div>
+      <div class="card orange"><div class="card-label">Calibrações Vencendo</div><div class="card-value" id="d-calib">—</div><div class="card-sub">próximos 30 dias</div></div>
+      <div class="card red"><div class="card-label">Treinamentos Vencendo</div><div class="card-value" id="d-trein">—</div><div class="card-sub">próximos 30 dias</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-box">
+        <h3>Vendas x Meta — Últimos 6 Meses (R$)</h3>
+        <div style="position:relative;height:240px">
+          <canvas id="chart-vendas"></canvas>
+        </div>
+      </div>
+      <div class="chart-box">
+        <h3>Status dos Equipamentos</h3>
+        <div style="position:relative;height:240px">
+          <canvas id="chart-status"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="table-box">
+      <h3>⚠️ Alertas de Vencimento — Próximos 30 Dias</h3>
+      <div class="table-scroll">
+        <table id="table-alertas">
+          <thead><tr><th>N° Série</th><th>Cliente</th><th>Região</th><th>Tipo</th><th>Vencimento</th><th>Dias</th></tr></thead>
+          <tbody id="tbody-alertas"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENTES -->
+  <div id="page-clientes" class="page">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>Clientes</h1>
+        <p>Cadastro e histórico completo por cliente</p>
+      </div>
+      <button class="btn btn-primary" onclick="abrirFormCliente()">+ Novo Cliente</button>
+    </div>
+    <div class="table-box">
+      <div class="table-toolbar">
+        <input type="text" id="cli-busca" placeholder="🔍  Razão social, CNPJ, cidade..." oninput="renderClientes()">
+        <select id="cli-uf" onchange="renderClientes()">
+          <option value="">Todos os estados</option>
+        </select>
+        <span class="table-count" id="count-clientes"></span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Razão Social</th><th>CNPJ</th><th>Cidade</th><th>UF</th><th>Região</th>
+            <th style="text-align:center">Contratos</th><th style="text-align:center">Equip. Ativos</th><th style="text-align:center">Vendas</th>
+          </tr></thead>
+          <tbody id="tbody-clientes"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pag-clientes"></div>
+    </div>
+    <div id="detalhe-cliente" style="display:none">
+      <div class="table-box">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <h3 id="detalhe-cli-nome" style="color:#0f3460;font-size:18px;font-weight:700"></h3>
+            <p id="detalhe-cli-sub" style="color:#64748b;font-size:13px;margin-top:4px"></p>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost" onclick="editarClienteAtual()">✏️ Editar</button>
+            <button class="btn-ghost" onclick="document.getElementById('detalhe-cliente').style.display='none'">✕ Fechar</button>
+          </div>
+        </div>
+        <div class="detail-tabs">
+          <div class="detail-tab active" onclick="showClienteTab('contratos')">📋 Contratos</div>
+          <div class="detail-tab" onclick="showClienteTab('equipamentos')">🔧 Equipamentos</div>
+          <div class="detail-tab" onclick="showClienteTab('vendas')">💰 Vendas</div>
+          <div class="detail-tab" onclick="showClienteTab('consumo')">📦 Consumo</div>
+        </div>
+        <div id="cli-panel-contratos" class="detail-panel active">
+          <div class="table-scroll"><table>
+            <thead><tr><th>Contrato</th><th>Situação</th><th>Val. Contrato</th><th>Equipamentos</th><th>Ativos</th><th>Prox. Calibração</th><th>Prox. Treinamento</th></tr></thead>
+            <tbody id="cli-tbody-contratos"></tbody>
+          </table></div>
+        </div>
+        <div id="cli-panel-equipamentos" class="detail-panel">
+          <div class="table-scroll"><table>
+            <thead><tr><th>N° Série</th><th>Produto</th><th>Contrato</th><th>Status</th><th>Venc. Calibração</th><th>Venc. Treinamento</th></tr></thead>
+            <tbody id="cli-tbody-equipamentos"></tbody>
+          </table></div>
+        </div>
+        <div id="cli-panel-vendas" class="detail-panel">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+            <div class="card blue" style="margin:0"><div class="card-label">Total Vendas</div><div class="card-value" id="cli-v-total">—</div></div>
+            <div class="card green" style="margin:0"><div class="card-label">Total Faturado</div><div class="card-value" id="cli-v-fat">—</div></div>
+            <div class="card orange" style="margin:0"><div class="card-label">A Receber</div><div class="card-value" id="cli-v-rec">—</div></div>
+          </div>
+          <div class="table-scroll"><table>
+            <thead><tr><th>Fechamento</th><th>Pedido</th><th>NF</th><th>Produto</th><th>Qtd</th><th>Valor</th><th>Posição</th></tr></thead>
+            <tbody id="cli-tbody-vendas"></tbody>
+          </table></div>
+        </div>
+        <div id="cli-panel-consumo" class="detail-panel">
+          <div class="table-scroll"><table>
+            <thead><tr><th>Período</th><th>Nº Equipos</th><th>Consumo Equipos</th><th>Nº Seringas</th><th>Consumo Seringas</th><th>Classificação</th></tr></thead>
+            <tbody id="cli-tbody-consumo"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTRATOS -->
+  <div id="page-contratos" class="page">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>Contratos</h1>
+        <p>Gestão de contratos e equipamentos STR</p>
+      </div>
+      <button class="btn btn-primary" onclick="abrirFormEquip()">+ Novo Contrato</button>
+    </div>
+    <div id="alerta-vencidos-vigentes" style="display:none;background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:16px 20px;margin-bottom:16px;align-items:center;gap:12px;cursor:pointer" onclick="filtrarVencidosVigentes()">
+      <span style="font-size:28px">🚨</span>
+      <div>
+        <div style="font-weight:700;color:#9f1239;font-size:14px"><span id="qtd-vencidos-vigentes">0</span> contratos com data vencida ainda marcados como Vigente</div>
+        <div style="font-size:12px;color:#be123c;margin-top:2px">Clique para ver apenas esses contratos</div>
+      </div>
+    </div>
+    <div class="table-box">
+      <div class="table-toolbar">
+        <input type="text" id="filtro-contrato-busca" placeholder="🔍  Buscar cliente, contrato, CNPJ, n° série..." oninput="renderContratos()">
+        <select id="filtro-contrato-situacao" onchange="renderContratos()">
+          <option value="">Todas as situações</option>
+          <option value="Vigente">Vigente</option>
+          <option value="vencido_vigente">⚠️ Vencido mas Vigente</option>
+          <option value="Finalizado">Finalizado</option>
+          <option value="Em regularização">Em regularização</option>
+        </select>
+        <select id="filtro-contrato-status" onchange="renderContratos()">
+          <option value="">Todos os status</option>
+          <option value="ATIVO">Ativo</option>
+          <option value="COLETADA HMN">Coletada HMN</option>
+          <option value="DEVOLVIDA STR">Devolvida STR</option>
+        </select>
+        <select id="filtro-contrato-regiao" onchange="renderContratos()">
+          <option value="">Todas as regiões</option>
+        </select>
+        <span class="table-count" id="count-contratos"></span>
+        <button id="btn-modo-contratos" class="btn btn-primary" onclick="toggleModoContratos()" style="margin-left:auto;white-space:nowrap">📋 Detalhado</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead id="thead-contratos">
+            <tr>
+              <th style="width:32px"></th>
+              <th>Contrato</th><th>Cliente</th><th>CNPJ</th><th>Situação</th>
+              <th style="text-align:center">Equiptos</th><th style="text-align:center">Ativos</th>
+              <th>Val. Contrato</th><th>Prox. Calibração</th><th>Prox. Treinamento</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-contratos"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pag-contratos"></div>
+    </div>
+  </div>
+
+  <!-- MODAL CLIENTE -->
+  <div id="modal-cliente-overlay" onclick="fecharFormCliente(event)" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:16px;width:560px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+      <div style="padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+        <h2 id="modal-cli-titulo" style="font-size:16px;color:#0f3460;font-weight:700">Novo Cliente</h2>
+        <button onclick="fecharFormCliente()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8">✕</button>
+      </div>
+      <div style="padding:24px;overflow-y:auto">
+        <input type="hidden" id="fc-id">
+        <div class="form-grid">
+          <div class="form-group full"><label>Razão Social *</label><input id="fc-razaoSocial" placeholder="Nome completo da empresa"></div>
+          <div class="form-group"><label>CNPJ / CPF *</label><input id="fc-cnpj" placeholder="00.000.000/0000-00"></div>
+          <div class="form-group"><label>Cidade</label><input id="fc-cidade" placeholder="Cidade"></div>
+          <div class="form-group"><label>Estado</label><input id="fc-estado" placeholder="Ex: Santa Catarina"></div>
+          <div class="form-group"><label>UF</label><input id="fc-siglaEstado" placeholder="Ex: SC" maxlength="2" style="text-transform:uppercase"></div>
+          <div class="form-group"><label>Região</label><input id="fc-regiao" placeholder="Ex: Grande Florianópolis"></div>
+          <div class="form-group full"><label>Endereço</label><input id="fc-endereco" placeholder="Rua, número, bairro (opcional)"></div>
+          <div class="form-group full"><label>Observação</label><textarea id="fc-observacao" rows="2" style="resize:vertical;font-family:inherit;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:#f8fafc;width:100%;outline:none"></textarea></div>
+        </div>
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid #e2e8f0;display:flex;gap:8px;justify-content:flex-end">
+        <button id="btn-excluir-cliente" class="btn btn-danger" style="margin-right:auto;display:none" onclick="excluirCliente()">🗑️ Excluir</button>
+        <button class="btn-ghost" onclick="fecharFormCliente()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarCliente()">💾 Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CADASTRO/EDIÇÃO -->
+  <div id="modal-overlay" onclick="fecharFormEquip(event)">
+    <div id="modal-box">
+      <div id="modal-header">
+        <div style="display:flex;flex-direction:column;gap:10px;flex:1">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h2 id="modal-titulo">Novo Equipamento</h2>
+            <button onclick="fecharFormEquip()">✕</button>
+          </div>
+          <div id="modal-tabs" style="display:flex;gap:4px">
+            <button id="tab-individual" onclick="setModoLote(false)" style="padding:6px 14px;border-radius:6px;border:1px solid #0f3460;background:#0f3460;color:white;font-size:12px;cursor:pointer;font-weight:600">Individual</button>
+            <button id="tab-lote" onclick="setModoLote(true)" style="padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;background:white;color:#64748b;font-size:12px;cursor:pointer;font-weight:600">Em Lote</button>
+          </div>
+        </div>
+      </div>
+      <div id="modal-body">
+        <input type="hidden" id="f-id">
+        <div class="form-grid">
+          <div class="form-section-title">Identificação</div>
+          <!-- Individual -->
+          <div id="campo-serie-individual" class="form-group"><label>N° Série *</label><input id="f-nSerie" placeholder="Ex: 84886R/08"></div>
+          <!-- Lote -->
+          <div id="campo-serie-lote" class="form-group full" style="display:none">
+            <label>N° de Série — um por linha *
+              <span id="lote-contador" style="font-weight:400;color:#94a3b8;text-transform:none;margin-left:8px"></span>
+            </label>
+            <textarea id="f-nSerie-lote" rows="6" placeholder="Digite um número de série por linha:&#10;84886R/08&#10;84887R/08&#10;84888R/08" oninput="atualizarContadorLote()" style="font-family:monospace;font-size:13px;resize:vertical"></textarea>
+          </div>
+          <div class="form-group"><label>Status do Equipamento</label>
+            <select id="f-statusEquip">
+              <option value="ATIVO">Ativo</option>
+              <option value="COLETADA HMN">Coletada HMN</option>
+              <option value="DEVOLVIDA STR">Devolvida STR</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Código do Produto</label><input id="f-codigo" placeholder="Ex: PB002480"></div>
+          <div class="form-group"><label>Descrição / Produto</label><input id="f-descricao" placeholder="Nome do produto"></div>
+          <div class="form-group"><label>Categoria</label>
+            <select id="f-categoria">
+              <option value="">—</option>
+              <option value="BI">BI</option>
+              <option value="SER">SER</option>
+              <option value="EX">EX</option>
+              <option value="UL">UL</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Marca</label>
+            <select id="f-marca">
+              <option value="">—</option>
+              <option value="STR">STR</option>
+              <option value="CMB">CMB</option>
+              <option value="HMN">HMN</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid" style="margin-top:16px">
+          <div class="form-section-title">Contrato</div>
+          <div class="form-group"><label>Número do Contrato</label><input id="f-contrato" placeholder="Ex: 1.27.004841.2021"></div>
+          <div class="form-group"><label>Situação do Contrato</label>
+            <select id="f-situacaoContrato">
+              <option value="Vigente">Vigente</option>
+              <option value="Finalizado">Finalizado</option>
+              <option value="Em regularização">Em regularização</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Validade do Contrato</label><input type="date" id="f-validadeContrato"></div>
+          <div class="form-group"><label>Nota Fiscal</label><input id="f-notaFiscal" placeholder="Número da NF"></div>
+          <div class="form-group"><label>Data de Emissão NF</label><input type="date" id="f-dataEmissaoNF"></div>
+        </div>
+        <div class="form-grid" style="margin-top:16px">
+          <div class="form-section-title">Cliente</div>
+          <div class="form-group full">
+            <label>Razão Social *</label>
+            <div style="position:relative">
+              <input id="f-cliente-busca" placeholder="Digite para buscar cliente cadastrado..." autocomplete="off" oninput="buscarClientesAC()" onfocus="buscarClientesAC()" style="width:100%;padding-right:36px">
+              <button type="button" id="f-cliente-clear" onclick="limparClienteAC()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:18px;line-height:1">✕</button>
+              <div id="f-cliente-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:1000;max-height:220px;overflow-y:auto;margin-top:4px"></div>
+            </div>
+            <input type="hidden" id="f-cliente">
+          </div>
+          <div class="form-group"><label>CNPJ / CPF</label><input id="f-cnpj" readonly placeholder="Preenchido ao selecionar" style="background:#f1f5f9;color:#64748b;cursor:default"></div>
+          <div class="form-group"><label>Cidade</label><input id="f-cidade" readonly style="background:#f1f5f9;color:#64748b;cursor:default"></div>
+          <div class="form-group"><label>Estado</label><input id="f-estado" readonly style="background:#f1f5f9;color:#64748b;cursor:default"></div>
+          <div class="form-group"><label>Sigla UF</label><input id="f-siglaEstado" readonly style="background:#f1f5f9;color:#64748b;cursor:default;text-transform:uppercase"></div>
+          <div class="form-group"><label>Região</label><input id="f-regiao" readonly style="background:#f1f5f9;color:#64748b;cursor:default"></div>
+        </div>
+        <div class="form-grid" style="margin-top:16px">
+          <div class="form-section-title">Calibração</div>
+          <div class="form-group"><label>Meses de Calibração</label><input type="number" id="f-mesesCalibracao" placeholder="Ex: 12" oninput="calcVencimentos()"></div>
+          <div class="form-group"><label>Data da Última Calibração</label><input type="date" id="f-dataUltimaCalibracao" oninput="calcVencimentos()"></div>
+          <div class="form-group"><label>Vencimento Calibração</label><input type="date" id="f-vencCalib" readonly title="Calculado automaticamente"></div>
+        </div>
+        <div class="form-grid" style="margin-top:16px">
+          <div class="form-section-title">Treinamento</div>
+          <div class="form-group"><label>Data do Último Treinamento</label><input type="date" id="f-dataTreinamento" oninput="calcVencTrein()"></div>
+          <div class="form-group"><label>Vencimento Treinamento</label><input type="date" id="f-vencTrein" title="Calculado (12 meses) ou edite manualmente"></div>
+        </div>
+        <div class="form-grid" style="margin-top:16px">
+          <div class="form-section-title">Observação</div>
+          <div class="form-group full"><textarea id="f-observacao" rows="2" placeholder="Observações adicionais"></textarea></div>
+        </div>
+      </div>
+      <div id="modal-footer">
+        <button id="btn-excluir-equip" class="btn btn-danger" style="margin-right:auto;display:none" onclick="excluirEquip()">🗑️ Excluir</button>
+        <button class="btn-ghost" onclick="fecharFormEquip()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarEquip()">💾 Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RASTREABILIDADE -->
+  <div id="page-rastreabilidade" class="page">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>Rastreabilidade</h1>
+        <p>Busque por número de série, contrato, cliente ou CNPJ. Clique na linha para ver detalhes.</p>
+      </div>
+      <button class="btn btn-primary" onclick="abrirFormEquip()">+ Novo Equipamento</button>
+    </div>
+    <div class="table-box">
+      <div class="table-toolbar">
+        <input type="text" id="rast-busca" placeholder="🔍  N° série, contrato, cliente, CNPJ, produto..." oninput="renderRastreabilidade()">
+        <select id="rast-status" onchange="renderRastreabilidade()">
+          <option value="">Todos os status</option>
+          <option value="ATIVO">Ativo</option>
+          <option value="COLETADA HMN">Coletada HMN</option>
+          <option value="DEVOLVIDA STR">Devolvida STR</option>
+        </select>
+        <select id="rast-venc" onchange="renderRastreabilidade()">
+          <option value="">Todos os vencimentos</option>
+          <option value="calib30">Calibração vencendo (30d)</option>
+          <option value="trein30">Treinamento vencendo (30d)</option>
+          <option value="contrato30">Contrato vencendo (30d)</option>
+          <option value="calibvencido">Calibração vencida</option>
+          <option value="treinvencido">Treinamento vencido</option>
+        </select>
+        <span class="table-count" id="count-rast"></span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>N° Série</th><th>Cliente</th><th>Contrato</th><th>Produto</th>
+              <th>Status</th><th>Últ. Calibração</th><th>Venc. Calibração</th>
+              <th>Últ. Treinamento</th><th>Venc. Treinamento</th><th>Val. Contrato</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-rast"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pag-rast"></div>
+    </div>
+    <div id="detalhe-equip">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h3 style="color:#0f3460;font-size:16px">📋 Detalhes do Equipamento</h3>
+        <button class="btn btn-primary" id="btn-editar-equip" onclick="editarEquipAtual()">✏️ Editar</button>
+      </div>
+      <div class="detalhe-grid" id="detalhe-grid"></div>
+    </div>
+  </div>
+
+  <!-- VENDAS -->
+  <div id="page-vendas" class="page">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>Radar de Vendas</h1>
+        <p>Pedidos, faturamento e comissões</p>
+      </div>
+    </div>
+    <div class="cards" style="margin-bottom:16px">
+      <div class="card blue"><div class="card-label">Total Vendas</div><div class="card-value" id="v-total">—</div><div class="card-sub">filtro aplicado</div></div>
+      <div class="card green"><div class="card-label">Total Faturado</div><div class="card-value" id="v-fat">—</div></div>
+      <div class="card orange"><div class="card-label">Comissões Estimadas</div><div class="card-value" id="v-com">—</div></div>
+      <div class="card red"><div class="card-label">A Receber</div><div class="card-value" id="v-rec">—</div></div>
+    </div>
+    <div class="table-box">
+      <div class="table-toolbar">
+        <input type="text" id="v-busca" placeholder="🔍  Cliente, pedido, produto, NF..." oninput="renderVendas()">
+        <select id="v-marca" onchange="renderVendas()">
+          <option value="">Todas as marcas</option>
+          <option value="STR">STR</option>
+          <option value="CMB">CMB</option>
+          <option value="HMN">HMN</option>
+        </select>
+        <select id="v-posicao" onchange="renderVendas()">
+          <option value="">Todas as posições</option>
+          <option value="Pago">Pago</option>
+          <option value="Em Pagamento">Em Pagamento</option>
+          <option value="Aguardando Pagamento">Aguardando Pagamento</option>
+        </select>
+        <input type="month" id="v-mes" onchange="renderVendas()" title="Filtrar por mês de fechamento">
+        <span class="table-count" id="count-vendas"></span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Fechamento</th><th>Pedido</th><th>NF</th><th>Cliente</th><th>Produto</th>
+              <th>Qtd</th><th>Valor Total</th><th>Parcelas</th><th>Pago</th><th>A Pagar</th>
+              <th>Posição</th><th>Comissão</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-vendas"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pag-vendas"></div>
+    </div>
+  </div>
+
+  <!-- CONSUMO -->
+  <div id="page-consumo" class="page">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>Consumo de Insumos</h1>
+        <p>Acompanhamento mensal de consumo por cliente</p>
+      </div>
+    </div>
+    <div class="table-box">
+      <div class="table-toolbar">
+        <input type="text" id="cons-busca" placeholder="🔍  Buscar cliente, CNPJ..." oninput="renderConsumo()">
+        <input type="month" id="cons-mes" onchange="renderConsumo()" title="Filtrar por período">
+        <select id="cons-classif" onchange="renderConsumo()">
+          <option value="">Todas as classificações</option>
+          <option value="VERIFIQUE CONSUMO">Verifique Consumo</option>
+          <option value="BOM">Bom</option>
+          <option value="ATENÇÃO">Atenção</option>
+        </select>
+        <span class="table-count" id="count-consumo"></span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th><th>CNPJ</th><th>Período</th>
+              <th>Nº Equipos</th><th>Consumo Equipos</th>
+              <th>Nº Seringas</th><th>Consumo Seringas</th>
+              <th>Nº Extensores</th><th>Consumo Extensores</th>
+              <th>Classificação</th><th>Venc. Contrato</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-consumo"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pag-consumo"></div>
+    </div>
+  </div>
+
+  <!-- IMPORTAR -->
+  <div id="page-importar" class="page">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>Importar Dados</h1>
+        <p>Importe a planilha Excel para atualizar todos os dados do sistema</p>
+      </div>
+    </div>
+    <div class="table-box">
+      <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div class="drop-icon">📂</div>
+        <p><strong>Clique aqui</strong> ou arraste o arquivo Excel</p>
+        <span>Formatos aceitos: .xlsx — Abas: BISTR, BISTR.OLD, BDSTRVendas, STRConsumo, Metas</span>
+      </div>
+      <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="importFile(this.files[0])">
+      <div id="import-log"></div>
+    </div>
+    <div id="import-status-box" style="display:none">
+      <div class="table-box">
+        <h3>Status da Base de Dados</h3>
+        <div class="cards" id="import-stats"></div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9;display:flex;gap:8px">
+          <button class="btn btn-danger" onclick="confirmarLimpar()">🗑️ Limpar Base de Dados</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// FIREBASE CONFIG — substitua pelos valores do seu projeto
+// ============================================================
+const firebaseConfig = {
+  apiKey:            "AIzaSyA8WfEMyOXllcjplr8x-U9ONlL9R7O2gQU",
+  authDomain:        "hominum-c518b.firebaseapp.com",
+  projectId:         "hominum-c518b",
+  storageBucket:     "hominum-c518b.firebasestorage.app",
+  messagingSenderId: "963339717976",
+  appId:             "1:963339717976:web:38538a8152be51640da92d"
+};
+firebase.initializeApp(firebaseConfig);
+
+// ============================================================
+// DATABASE — Abstração Firestore (API compatível com Dexie)
+// ============================================================
+class FSQuery {
+  constructor(colRef) { this._q = colRef; this._field = null; }
+  equals(value)      { this._q = this._q.where(this._field, '==', value); return this; }
+  above(value)       { this._q = this._q.where(this._field, '>',  value); return this; }
+  below(value)       { this._q = this._q.where(this._field, '<',  value); return this; }
+  orderBy(f, d='asc'){ this._q = this._q.orderBy(f, d); return this; }
+  limit(n)           { this._q = this._q.limit(n); return this; }
+  async toArray() {
+    const s = await this._q.get();
+    return s.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  async first() {
+    const s = await this._q.limit(1).get();
+    if (s.empty) return undefined;
+    const d = s.docs[0];
+    return { id: d.id, ...d.data() };
+  }
+  async count() { const s = await this._q.get(); return s.size; }
+}
+
+class FSCollection {
+  constructor(name) { this._name = name; }
+  _ref() { return firebase.firestore().collection(this._name); }
+
+  async count() { return (await this._ref().get()).size; }
+
+  async toArray() {
+    const s = await this._ref().get();
+    return s.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+
+  async get(id) {
+    const d = await this._ref().doc(String(id)).get();
+    return d.exists ? { id: d.id, ...d.data() } : undefined;
+  }
+
+  async add(data) {
+    const ref = await this._ref().add(data);
+    return ref.id;
+  }
+
+  async update(id, data) {
+    await this._ref().doc(String(id)).update(data);
+  }
+
+  async put(data) {
+    const { id, ...rest } = data;
+    if (id) { await this._ref().doc(String(id)).set(rest, { merge: true }); return id; }
+    const ref = await this._ref().add(rest);
+    return ref.id;
+  }
+
+  async delete(id) {
+    await this._ref().doc(String(id)).delete();
+  }
+
+  async clear() {
+    const s = await this._ref().get();
+    for (let i = 0; i < s.docs.length; i += 400) {
+      const b = firebase.firestore().batch();
+      s.docs.slice(i, i + 400).forEach(d => b.delete(d.ref));
+      await b.commit();
+    }
+  }
+
+  async bulkAdd(items) {
+    if (!items || !items.length) return;
+    for (let i = 0; i < items.length; i += 400) {
+      const b = firebase.firestore().batch();
+      items.slice(i, i + 400).forEach(item => b.set(this._ref().doc(), item));
+      await b.commit();
+    }
+  }
+
+  where(field) {
+    const q = new FSQuery(this._ref());
+    q._field = field;
+    return q;
+  }
+}
+
+const db = {
+  equipamentos: new FSCollection('equipamentos'),
+  vendas:       new FSCollection('vendas'),
+  consumo:      new FSCollection('consumo'),
+  metas:        new FSCollection('metas'),
+  clientes:     new FSCollection('clientes'),
+};
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const pages = ['dashboard','clientes','contratos','rastreabilidade','vendas','consumo','importar'];
+  const idx = pages.indexOf(name);
+  if (idx >= 0) document.querySelectorAll('#sidebar nav a')[idx].classList.add('active');
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'clientes') { paginaClientes = 0; renderClientes(); }
+  if (name === 'contratos') { paginaContratos = 0; dadosContratosFiltrado = null; renderContratos(); }
+  if (name === 'rastreabilidade') { paginaRast = 0; dadosRastFiltrado = null; renderRastreabilidade(); }
+  if (name === 'vendas') { paginaVendas = 0; dadosVendasFiltrado = null; renderVendas(); }
+  if (name === 'consumo') { paginaConsumo = 0; dadosConsumoFiltrado = null; renderConsumo(); }
+  if (name === 'importar') loadImportStatus();
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function fmtDate(val) {
+  if (!val) return '—';
+  const d = new Date(val + 'T00:00:00');
+  if (isNaN(d)) return val;
+  return d.toLocaleDateString('pt-BR');
+}
+
+function fmtMoeda(val) {
+  if (val === null || val === undefined || val === '') return '—';
+  const n = Number(val);
+  if (isNaN(n)) return '—';
+  return n.toLocaleString('pt-BR', {style:'currency', currency:'BRL', maximumFractionDigits: 0});
+}
+
+function diasAte(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  return Math.round((d - hoje) / 86400000);
+}
+
+function isVencendo(dateStr, dias) {
+  const d = diasAte(dateStr);
+  return d !== null && d >= 0 && d <= dias;
+}
+
+function isVencido(dateStr) {
+  const d = diasAte(dateStr);
+  return d !== null && d < 0;
+}
+
+function vencBadge(dateStr) {
+  if (!dateStr) return '<span style="color:#ccc">—</span>';
+  if (isVencido(dateStr)) return `<span class="badge badge-red">${fmtDate(dateStr)}</span>`;
+  if (isVencendo(dateStr, 30)) return `<span class="badge badge-orange">${fmtDate(dateStr)}</span>`;
+  return `<span style="color:#334155">${fmtDate(dateStr)}</span>`;
+}
+
+function statusBadge(status) {
+  const map = {
+    'ATIVO': 'badge-green', 'Vigente': 'badge-green', 'FATURADO': 'badge-blue',
+    'Pago': 'badge-green', 'COLETADA HMN': 'badge-orange', 'Em regularização': 'badge-orange',
+    'Em Pagamento': 'badge-orange', 'DEVOLVIDA STR': 'badge-gray', 'Finalizado': 'badge-gray',
+    'Aguardando Pagamento': 'badge-red',
+  };
+  if (!status) return '<span style="color:#ccc">—</span>';
+  return `<span class="badge ${map[status] || 'badge-gray'}">${status}</span>`;
+}
+
+function renderPagination(containerId, total, porPagina, paginaAtual, callbackName) {
+  const totalPag = Math.ceil(total / porPagina);
+  const el = document.getElementById(containerId);
+  if (totalPag <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  const start = Math.max(0, paginaAtual - 2);
+  const end = Math.min(totalPag - 1, paginaAtual + 2);
+  if (paginaAtual > 0) html += `<button onclick="${callbackName}(${paginaAtual-1})">‹</button>`;
+  if (start > 0) html += `<button onclick="${callbackName}(0)">1</button>`;
+  if (start > 1) html += `<button disabled>…</button>`;
+  for (let i = start; i <= end; i++) {
+    html += `<button class="${i===paginaAtual?'active':''}" onclick="${callbackName}(${i})">${i+1}</button>`;
+  }
+  if (end < totalPag - 2) html += `<button disabled>…</button>`;
+  if (end < totalPag - 1) html += `<button onclick="${callbackName}(${totalPag-1})">${totalPag}</button>`;
+  if (paginaAtual < totalPag - 1) html += `<button onclick="${callbackName}(${paginaAtual+1})">›</button>`;
+  el.innerHTML = html;
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+let chartVendas = null, chartStatus = null;
+
+async function loadDashboard() {
+  const equips = await db.equipamentos.toArray();
+  const vendas = await db.vendas.toArray();
+  const metas = await db.metas.toArray();
+
+  if (equips.length === 0) {
+    document.getElementById('page-dashboard').innerHTML = `
+      <div class="welcome-box">
+        <div class="welcome-icon">📊</div>
+        <h2>Bem-vindo ao STR Sistema</h2>
+        <p>Nenhum dado encontrado. Importe sua planilha Excel para começar.</p>
+        <button class="btn btn-primary" onclick="showPage('importar')">📤 Importar Dados Agora</button>
+      </div>`;
+    return;
+  }
+
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const limite30 = new Date(hoje); limite30.setDate(hoje.getDate() + 30);
+
+  const ativos = equips.filter(e => e.statusEquip === 'ATIVO');
+  const vigentes = [...new Set(equips.filter(e => e.situacaoContrato === 'Vigente').map(e => e.contrato))];
+  const clientesAtivos = [...new Set(ativos.map(e => e.cnpj).filter(Boolean))];
+  const calibVenc = equips.filter(e => e.vencCalib && isVencendo(e.vencCalib, 30));
+  const treinVenc = equips.filter(e => e.vencTrein && isVencendo(e.vencTrein, 30));
+
+  document.getElementById('d-ativos').textContent = ativos.length.toLocaleString('pt-BR');
+  document.getElementById('d-contratos').textContent = vigentes.length.toLocaleString('pt-BR');
+  document.getElementById('d-clientes').textContent = clientesAtivos.length.toLocaleString('pt-BR');
+  document.getElementById('d-calib').textContent = calibVenc.length.toLocaleString('pt-BR');
+  document.getElementById('d-trein').textContent = treinVenc.length.toLocaleString('pt-BR');
+  document.getElementById('dash-data-ref').textContent = `Atualizado em ${hoje.toLocaleDateString('pt-BR')}`;
+
+  // Alertas
+  const alertas = [];
+  calibVenc.forEach(e => alertas.push({nSerie: e.nSerie, cliente: e.cliente, regiao: e.regiao, tipo: 'Calibração', venc: e.vencCalib}));
+  treinVenc.forEach(e => alertas.push({nSerie: e.nSerie, cliente: e.cliente, regiao: e.regiao, tipo: 'Treinamento', venc: e.vencTrein}));
+  alertas.sort((a, b) => new Date(a.venc) - new Date(b.venc));
+
+  const tbody = document.getElementById('tbody-alertas');
+  if (alertas.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="no-data"><div class="no-data-icon">✅</div><p>Nenhum vencimento próximo</p></td></tr>';
+  } else {
+    tbody.innerHTML = alertas.slice(0, 30).map(a => {
+      const dias = diasAte(a.venc);
+      return `<tr>
+        <td><strong>${a.nSerie || '—'}</strong></td>
+        <td class="td-ellipsis" title="${a.cliente||''}">${a.cliente || '—'}</td>
+        <td>${a.regiao || '—'}</td>
+        <td><span class="badge badge-orange">${a.tipo}</span></td>
+        <td>${vencBadge(a.venc)}</td>
+        <td><span class="badge ${dias <= 7 ? 'badge-red' : 'badge-orange'}">${dias}d</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Chart: Vendas x Meta
+  const meses = [];
+  const ref = new Date(hoje); ref.setMonth(hoje.getMonth() - 5);
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(ref.getFullYear(), ref.getMonth() + i, 1);
+    meses.push({ label: d.toLocaleDateString('pt-BR', {month:'short', year:'2-digit'}), key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` });
+  }
+
+  const vendaByMes = {};
+  vendas.forEach(v => {
+    if (!v.fechamento) return;
+    const k = v.fechamento.substring(0, 7);
+    vendaByMes[k] = (vendaByMes[k] || 0) + (Number(v.valorVenda) || 0);
+  });
+
+  const metaByMes = {};
+  metas.forEach(m => {
+    if (!m.dataInicial) return;
+    const k = m.dataInicial.substring(0, 7);
+    metaByMes[k] = (metaByMes[k] || 0) + (Number(m.meta) || 0);
+  });
+
+  if (chartVendas) chartVendas.destroy();
+  chartVendas = new Chart(document.getElementById('chart-vendas'), {
+    type: 'bar',
+    data: {
+      labels: meses.map(m => m.label),
+      datasets: [
+        { label: 'Vendas', data: meses.map(m => vendaByMes[m.key] || 0), backgroundColor: '#0f3460cc', borderRadius: 6 },
+        { label: 'Meta', data: meses.map(m => metaByMes[m.key] || 0), backgroundColor: '#e9456066', borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } },
+      scales: { y: { ticks: { callback: v => 'R$' + (v/1000).toFixed(0) + 'k', font: { size: 11 } } } }
+    }
+  });
+
+  // Chart: Status
+  const statusCount = {};
+  equips.forEach(e => {
+    const k = e.statusEquip || 'N/D';
+    statusCount[k] = (statusCount[k] || 0) + 1;
+  });
+  const colors = { 'ATIVO': '#10b981', 'COLETADA HMN': '#f59e0b', 'DEVOLVIDA STR': '#94a3b8', 'N/D': '#e2e8f0' };
+
+  if (chartStatus) chartStatus.destroy();
+  chartStatus = new Chart(document.getElementById('chart-status'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(statusCount),
+      datasets: [{ data: Object.values(statusCount), backgroundColor: Object.keys(statusCount).map(k => colors[k] || '#6366f1'), borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } }
+    }
+  });
+}
+
+// ============================================================
+// CLIENTES
+// ============================================================
+let paginaClientes = 0;
+let clienteAtualCnpj = null;
+let clienteAtualId = null;
+
+async function renderClientes(pag) {
+  if (pag !== undefined) paginaClientes = pag;
+  const busca = document.getElementById('cli-busca').value.toLowerCase();
+  const uf = document.getElementById('cli-uf').value;
+
+  const [cadastrados, equips, vendasAll] = await Promise.all([
+    db.clientes.toArray(),
+    db.equipamentos.toArray(),
+    db.vendas.toArray(),
+  ]);
+
+  const mapaClientes = new Map();
+  equips.forEach(e => {
+    if (!e.cnpj) return;
+    if (!mapaClientes.has(e.cnpj)) {
+      mapaClientes.set(e.cnpj, { cnpj: e.cnpj, razaoSocial: e.cliente || e.cnpj, cidade: e.cidade, estado: e.estado, siglaEstado: e.siglaEstado, regiao: e.regiao, fonte: 'equip' });
+    }
+  });
+  cadastrados.forEach(c => {
+    mapaClientes.set(c.cnpj, { ...mapaClientes.get(c.cnpj), ...c, fonte: 'cadastro' });
+  });
+
+  const contratosMap = {};
+  const ativosMap = {};
+  equips.forEach(e => {
+    if (!e.cnpj) return;
+    if (!contratosMap[e.cnpj]) contratosMap[e.cnpj] = new Set();
+    if (e.contrato) contratosMap[e.cnpj].add(e.contrato);
+    if (e.statusEquip === 'ATIVO') ativosMap[e.cnpj] = (ativosMap[e.cnpj] || 0) + 1;
+  });
+  const vendasMap = {};
+  vendasAll.forEach(v => {
+    if (!v.cnpj) return;
+    vendasMap[v.cnpj] = (vendasMap[v.cnpj] || 0) + 1;
+  });
+
+  let lista = [...mapaClientes.values()].map(c => ({
+    ...c,
+    nContratos: contratosMap[c.cnpj] ? contratosMap[c.cnpj].size : 0,
+    nAtivos: ativosMap[c.cnpj] || 0,
+    nVendas: vendasMap[c.cnpj] || 0,
+  })).sort((a, b) => (a.razaoSocial || '').localeCompare(b.razaoSocial || ''));
+
+  if (document.getElementById('cli-uf').options.length <= 1) {
+    const ufs = [...new Set(lista.map(c => c.siglaEstado).filter(Boolean))].sort();
+    const sel = document.getElementById('cli-uf');
+    ufs.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; sel.appendChild(o); });
+  }
+
+  let filtrado = lista.filter(c => {
+    const ok1 = !busca || [c.razaoSocial, c.cnpj, c.cidade, c.regiao].some(v => (v||'').toLowerCase().includes(busca));
+    const ok2 = !uf || c.siglaEstado === uf;
+    return ok1 && ok2;
+  });
+
+  document.getElementById('count-clientes').textContent = `${filtrado.length.toLocaleString('pt-BR')} clientes`;
+
+  const inicio = paginaClientes * POR_PAGINA;
+  const pagina = filtrado.slice(inicio, inicio + POR_PAGINA);
+
+  const tbody = document.getElementById('tbody-clientes');
+  if (filtrado.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="no-data"><div class="no-data-icon">👥</div><p>Nenhum cliente encontrado</p></div></td></tr>';
+    document.getElementById('pag-clientes').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = pagina.map(c => `
+    <tr style="cursor:pointer" onclick="abrirDetalheCliente('${(c.cnpj||'').replace(/'/g,"\\'")}')">
+      <td><strong>${c.razaoSocial || '—'}</strong></td>
+      <td style="font-size:12px">${c.cnpj || '—'}</td>
+      <td>${c.cidade || '—'}</td>
+      <td style="text-align:center">${c.siglaEstado || '—'}</td>
+      <td>${c.regiao || '—'}</td>
+      <td style="text-align:center"><span class="badge badge-blue">${c.nContratos}</span></td>
+      <td style="text-align:center"><span class="badge ${c.nAtivos > 0 ? 'badge-green' : 'badge-gray'}">${c.nAtivos}</span></td>
+      <td style="text-align:center">${c.nVendas > 0 ? `<span class="badge badge-purple">${c.nVendas}</span>` : '—'}</td>
+    </tr>
+  `).join('');
+
+  renderPagination('pag-clientes', filtrado.length, POR_PAGINA, paginaClientes, 'renderClientes');
+}
+
+async function abrirDetalheCliente(cnpj) {
+  clienteAtualCnpj = cnpj;
+  const [equips, vendasAll, consumoAll, cadastrado] = await Promise.all([
+    db.equipamentos.where('cnpj').equals(cnpj).toArray(),
+    db.vendas.where('cnpj').equals(cnpj).toArray(),
+    db.consumo.where('cnpj').equals(cnpj).toArray(),
+    db.clientes.where('cnpj').equals(cnpj).first(),
+  ]);
+
+  const nome = cadastrado?.razaoSocial || equips[0]?.cliente || cnpj;
+  const cidade = cadastrado?.cidade || equips[0]?.cidade || '';
+  const uf = cadastrado?.siglaEstado || equips[0]?.siglaEstado || '';
+  clienteAtualId = cadastrado?.id || null;
+
+  document.getElementById('detalhe-cli-nome').textContent = nome;
+  document.getElementById('detalhe-cli-sub').textContent = [cnpj, cidade, uf].filter(Boolean).join(' · ');
+
+  const grupos = new Map();
+  equips.forEach(e => {
+    const key = e.contrato || '(sem contrato)';
+    if (!grupos.has(key)) grupos.set(key, []);
+    grupos.get(key).push(e);
+  });
+  document.getElementById('cli-tbody-contratos').innerHTML = grupos.size === 0
+    ? '<tr><td colspan="7" class="no-data"><p>Nenhum contrato</p></td></tr>'
+    : [...grupos.entries()].map(([key, eqs]) => {
+        const ativos = eqs.filter(e => e.statusEquip === 'ATIVO').length;
+        const calibDates = eqs.map(e => e.vencCalib).filter(Boolean).sort();
+        const treinDates = eqs.map(e => e.vencTrein).filter(Boolean).sort();
+        const alerta = eqs.some(isVencidoVigente);
+        return `<tr>
+          <td style="font-size:12px;white-space:nowrap">${alerta ? '⚠️ ' : ''}<strong>${key}</strong></td>
+          <td>${statusBadge(eqs[0].situacaoContrato)}</td>
+          <td>${vencBadge(eqs[0].validadeContrato)}</td>
+          <td style="text-align:center"><span class="badge badge-blue">${eqs.length}</span></td>
+          <td style="text-align:center"><span class="badge ${ativos > 0 ? 'badge-green' : 'badge-gray'}">${ativos}</span></td>
+          <td>${vencBadge(calibDates[0] || null)}</td>
+          <td>${vencBadge(treinDates[0] || null)}</td>
+        </tr>`;
+      }).join('');
+
+  document.getElementById('cli-tbody-equipamentos').innerHTML = equips.length === 0
+    ? '<tr><td colspan="6" class="no-data"><p>Nenhum equipamento</p></td></tr>'
+    : equips.map(e => `<tr>
+        <td><strong>${e.nSerie || '—'}</strong></td>
+        <td class="td-ellipsis" title="${e.descricao||''}">${e.descricao || '—'}</td>
+        <td style="font-size:12px">${e.contrato || '—'}</td>
+        <td>${statusBadge(e.statusEquip)}</td>
+        <td>${vencBadge(e.vencCalib)}</td>
+        <td>${vencBadge(e.vencTrein)}</td>
+      </tr>`).join('');
+
+  const totalVendas = vendasAll.reduce((s, v) => s + (Number(v.valorVenda) || 0), 0);
+  const totalFat = vendasAll.filter(v => v.faturado === 'FATURADO').reduce((s, v) => s + (Number(v.valorVenda) || 0), 0);
+  const totalRec = vendasAll.reduce((s, v) => s + Math.abs(Number(v.valorAPagar) || 0), 0);
+  document.getElementById('cli-v-total').textContent = fmtMoeda(totalVendas);
+  document.getElementById('cli-v-fat').textContent = fmtMoeda(totalFat);
+  document.getElementById('cli-v-rec').textContent = fmtMoeda(totalRec);
+  document.getElementById('cli-tbody-vendas').innerHTML = vendasAll.length === 0
+    ? '<tr><td colspan="7" class="no-data"><p>Nenhuma venda</p></td></tr>'
+    : vendasAll.sort((a, b) => (b.fechamento || '').localeCompare(a.fechamento || '')).map(v => `<tr>
+        <td style="white-space:nowrap">${fmtDate(v.fechamento)}</td>
+        <td>${v.pedido || '—'}</td>
+        <td>${v.notaFiscal || '—'}</td>
+        <td class="td-ellipsis" title="${v.equipamento||''}">${v.equipamento || '—'}</td>
+        <td style="text-align:center">${v.quantidade || '—'}</td>
+        <td style="white-space:nowrap">${fmtMoeda(v.valorVenda)}</td>
+        <td>${statusBadge(v.posicaoPagamento)}</td>
+      </tr>`).join('');
+
+  document.getElementById('cli-tbody-consumo').innerHTML = consumoAll.length === 0
+    ? '<tr><td colspan="6" class="no-data"><p>Nenhum consumo registrado</p></td></tr>'
+    : consumoAll.sort((a, b) => (b.dataInicio || '').localeCompare(a.dataInicio || '')).map(c => {
+        const classifClass = c.classificacao === 'VERIFIQUE CONSUMO' ? 'badge-red' : 'badge-green';
+        return `<tr>
+          <td style="white-space:nowrap;font-size:12px">${fmtDate(c.dataInicio)} – ${fmtDate(c.dataFim)}</td>
+          <td style="text-align:center">${c.nEquipos ?? 0}</td>
+          <td style="text-align:center">${c.consumoEquipos ?? 0}</td>
+          <td style="text-align:center">${c.nSeringas ?? 0}</td>
+          <td style="text-align:center">${c.consumoSeringas ?? 0}</td>
+          <td><span class="badge ${classifClass}">${c.classificacao || '—'}</span></td>
+        </tr>`;
+      }).join('');
+
+  showClienteTab('contratos');
+  const box = document.getElementById('detalhe-cliente');
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showClienteTab(tab) {
+  document.querySelectorAll('.detail-tab').forEach((t, i) => {
+    const tabs = ['contratos', 'equipamentos', 'vendas', 'consumo'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  ['contratos', 'equipamentos', 'vendas', 'consumo'].forEach(t => {
+    document.getElementById('cli-panel-' + t).classList.toggle('active', t === tab);
+  });
+}
+
+function abrirFormCliente(id = null) {
+  document.getElementById('modal-cli-titulo').textContent = id ? 'Editar Cliente' : 'Novo Cliente';
+  document.getElementById('btn-excluir-cliente').style.display = id ? 'inline-block' : 'none';
+  ['id','razaoSocial','cnpj','cidade','estado','siglaEstado','regiao','endereco','observacao'].forEach(f => {
+    const el = document.getElementById('fc-' + f);
+    if (el) el.value = '';
+  });
+  const overlay = document.getElementById('modal-cliente-overlay');
+  overlay.style.display = 'flex';
+  document.getElementById('fc-razaoSocial').focus();
+}
+
+async function abrirFormClienteComDados(id) {
+  const c = await db.clientes.get(id);
+  if (!c) return;
+  abrirFormCliente(id);
+  document.getElementById('fc-id').value = c.id;
+  ['razaoSocial','cnpj','cidade','estado','siglaEstado','regiao','endereco','observacao'].forEach(f => {
+    const el = document.getElementById('fc-' + f);
+    if (el && c[f]) el.value = c[f];
+  });
+}
+
+function editarClienteAtual() {
+  if (clienteAtualId) abrirFormClienteComDados(clienteAtualId);
+  else {
+    abrirFormCliente();
+    if (clienteAtualCnpj) document.getElementById('fc-cnpj').value = clienteAtualCnpj;
+  }
+}
+
+function fecharFormCliente(e) {
+  if (e && e.target !== document.getElementById('modal-cliente-overlay')) return;
+  document.getElementById('modal-cliente-overlay').style.display = 'none';
+}
+
+async function salvarCliente() {
+  const razaoSocial = document.getElementById('fc-razaoSocial').value.trim();
+  const cnpj = document.getElementById('fc-cnpj').value.trim();
+  if (!razaoSocial) { alert('Razão Social é obrigatória.'); document.getElementById('fc-razaoSocial').focus(); return; }
+  if (!cnpj) { alert('CNPJ/CPF é obrigatório.'); document.getElementById('fc-cnpj').focus(); return; }
+
+  const dados = {
+    razaoSocial, cnpj,
+    cidade: document.getElementById('fc-cidade').value.trim() || null,
+    estado: document.getElementById('fc-estado').value.trim() || null,
+    siglaEstado: document.getElementById('fc-siglaEstado').value.trim().toUpperCase() || null,
+    regiao: document.getElementById('fc-regiao').value.trim() || null,
+    endereco: document.getElementById('fc-endereco').value.trim() || null,
+    observacao: document.getElementById('fc-observacao').value.trim() || null,
+  };
+
+  const idVal = document.getElementById('fc-id').value;
+  if (idVal) {
+    await db.clientes.update(idVal, dados);
+    clienteAtualId = idVal;
+  } else {
+    const newId = await db.clientes.add(dados);
+    clienteAtualId = newId;
+  }
+
+  document.getElementById('modal-cliente-overlay').style.display = 'none';
+  renderClientes();
+  if (clienteAtualCnpj === cnpj) abrirDetalheCliente(cnpj);
+}
+
+async function excluirCliente() {
+  const idVal = document.getElementById('fc-id').value;
+  if (!idVal) return;
+  if (!confirm('Excluir este cliente do cadastro? Os equipamentos e contratos associados não serão apagados.')) return;
+  await db.clientes.delete(idVal);
+  document.getElementById('modal-cliente-overlay').style.display = 'none';
+  document.getElementById('detalhe-cliente').style.display = 'none';
+  clienteAtualId = null;
+  renderClientes();
+}
+
+// ============================================================
+// CONTRATOS
+// ============================================================
+let paginaContratos = 0, dadosContratosFiltrado = null;
+let modoAgrupado = true;
+let gruposExpandidos = new Set();
+const POR_PAGINA = 50;
+
+function isVencidoVigente(e) {
+  return e.situacaoContrato === 'Vigente' && e.validadeContrato && isVencido(e.validadeContrato);
+}
+
+function filtrarVencidosVigentes() {
+  document.getElementById('filtro-contrato-situacao').value = 'vencido_vigente';
+  paginaContratos = 0;
+  renderContratos();
+}
+
+function toggleModoContratos() {
+  modoAgrupado = !modoAgrupado;
+  gruposExpandidos.clear();
+  paginaContratos = 0;
+  document.getElementById('btn-modo-contratos').textContent = modoAgrupado ? '📋 Detalhado' : '📁 Agrupado';
+  if (dadosContratosFiltrado) renderContratosTabela(dadosContratosFiltrado);
+}
+
+function toggleGrupo(key) {
+  if (gruposExpandidos.has(key)) gruposExpandidos.delete(key);
+  else gruposExpandidos.add(key);
+  if (dadosContratosFiltrado) renderContratosTabela(dadosContratosFiltrado);
+}
+
+async function renderContratos(pag) {
+  if (pag !== undefined) paginaContratos = pag;
+  const busca = document.getElementById('filtro-contrato-busca').value.toLowerCase();
+  const sit = document.getElementById('filtro-contrato-situacao').value;
+  const sts = document.getElementById('filtro-contrato-status').value;
+  const reg = document.getElementById('filtro-contrato-regiao').value;
+
+  const todos = await db.equipamentos.toArray();
+
+  // Populate regiões
+  if (document.getElementById('filtro-contrato-regiao').options.length <= 1) {
+    const regioes = [...new Set(todos.map(e => e.regiao).filter(Boolean))].sort();
+    const sel = document.getElementById('filtro-contrato-regiao');
+    regioes.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; sel.appendChild(o); });
+  }
+
+  // Alerta de vencidos mas vigentes
+  const qtdVencidosVigentes = todos.filter(isVencidoVigente).length;
+  const alertaEl = document.getElementById('alerta-vencidos-vigentes');
+  if (qtdVencidosVigentes > 0) {
+    alertaEl.style.display = 'flex';
+    document.getElementById('qtd-vencidos-vigentes').textContent = qtdVencidosVigentes.toLocaleString('pt-BR');
+  } else {
+    alertaEl.style.display = 'none';
+  }
+
+  let filtrado = todos.filter(e => {
+    const ok1 = !busca || [e.cliente, e.contrato, e.cnpj, e.nSerie, e.descricao].some(v => (v||'').toLowerCase().includes(busca));
+    const ok2 = sit === 'vencido_vigente' ? isVencidoVigente(e) : (!sit || e.situacaoContrato === sit);
+    const ok3 = !sts || e.statusEquip === sts;
+    const ok4 = !reg || e.regiao === reg;
+    return ok1 && ok2 && ok3 && ok4;
+  });
+
+  dadosContratosFiltrado = filtrado;
+  renderContratosTabela(filtrado);
+}
+
+function renderContratosTabela(filtrado) {
+  const tbody = document.getElementById('tbody-contratos');
+  const thead = document.getElementById('thead-contratos');
+
+  if (filtrado.length === 0) {
+    thead.innerHTML = '<tr><th>—</th></tr>';
+    tbody.innerHTML = '<tr><td><div class="no-data"><div class="no-data-icon">📋</div><p>Nenhum registro encontrado</p></div></td></tr>';
+    document.getElementById('pag-contratos').innerHTML = '';
+    document.getElementById('count-contratos').textContent = '0 registros';
+    return;
+  }
+
+  if (modoAgrupado) {
+    // Agrupar por número de contrato
+    const grupos = new Map();
+    filtrado.forEach(e => {
+      const key = e.contrato || '(sem contrato)';
+      if (!grupos.has(key)) grupos.set(key, []);
+      grupos.get(key).push(e);
+    });
+
+    const gruposList = [...grupos.entries()];
+    document.getElementById('count-contratos').textContent = `${gruposList.length.toLocaleString('pt-BR')} contratos`;
+
+    thead.innerHTML = `<tr>
+      <th style="width:36px"></th>
+      <th>Contrato</th><th>Cliente</th><th>CNPJ</th><th>Situação</th>
+      <th style="text-align:center">Equiptos</th><th style="text-align:center">Ativos</th>
+      <th>Val. Contrato</th><th>Prox. Calibração</th><th>Prox. Treinamento</th>
+    </tr>`;
+
+    const inicio = paginaContratos * POR_PAGINA;
+    const paginaGrupos = gruposList.slice(inicio, inicio + POR_PAGINA);
+
+    let html = '';
+    paginaGrupos.forEach(([key, equips]) => {
+      const e0 = equips[0];
+      const temAlerta = equips.some(isVencidoVigente);
+      const expandido = gruposExpandidos.has(key);
+      const ativos = equips.filter(e => e.statusEquip === 'ATIVO').length;
+      const calibDates = equips.map(e => e.vencCalib).filter(Boolean).sort();
+      const treinDates = equips.map(e => e.vencTrein).filter(Boolean).sort();
+      const safeKey = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+      html += `<tr style="${temAlerta ? 'background:#fff1f2;' : ''}cursor:pointer;font-weight:500" onclick="toggleGrupo('${safeKey}')">
+        <td style="text-align:center;color:#64748b;font-size:16px">${expandido ? '▼' : '▶'}</td>
+        <td style="font-size:12px;white-space:nowrap">${temAlerta ? '<span title="Vencido mas Vigente" style="margin-right:4px">⚠️</span>' : ''}<strong>${key}</strong></td>
+        <td class="td-ellipsis" title="${e0.cliente||''}">${e0.cliente || '—'}</td>
+        <td style="font-size:12px">${e0.cnpj || '—'}</td>
+        <td>${statusBadge(e0.situacaoContrato)}</td>
+        <td style="text-align:center"><span class="badge badge-blue">${equips.length}</span></td>
+        <td style="text-align:center"><span class="badge ${ativos > 0 ? 'badge-green' : 'badge-gray'}">${ativos}</span></td>
+        <td>${vencBadge(e0.validadeContrato)}</td>
+        <td>${vencBadge(calibDates[0] || null)}</td>
+        <td>${vencBadge(treinDates[0] || null)}</td>
+      </tr>`;
+
+      if (expandido) {
+        equips.forEach(eq => {
+          const eqAlerta = isVencidoVigente(eq);
+          html += `<tr style="background:${eqAlerta ? '#fff5f5' : '#f8fafc'};font-size:12px">
+            <td style="border-left:3px solid #0f3460"></td>
+            <td style="padding-left:20px;color:#64748b;white-space:nowrap">↳ <strong>${eq.nSerie || '—'}</strong></td>
+            <td class="td-ellipsis" title="${eq.descricao||''}" colspan="2" style="color:#475569">${eq.descricao || '—'}</td>
+            <td colspan="2">${statusBadge(eq.statusEquip)}</td>
+            <td style="font-size:11px;color:#64748b">${eq.codigo || '—'}</td>
+            <td></td>
+            <td>${vencBadge(eq.vencCalib)}</td>
+            <td>${vencBadge(eq.vencTrein)}</td>
+          </tr>`;
+        });
+      }
+    });
+
+    tbody.innerHTML = html;
+    renderPagination('pag-contratos', gruposList.length, POR_PAGINA, paginaContratos, 'renderContratos');
+
+  } else {
+    // Modo detalhado (linha por equipamento)
+    document.getElementById('count-contratos').textContent = `${filtrado.length.toLocaleString('pt-BR')} registros`;
+
+    thead.innerHTML = `<tr>
+      <th>Contrato</th><th>Cliente</th><th>CNPJ</th><th>Produto</th>
+      <th>N° Série</th><th>Situação</th><th>Status</th>
+      <th>Val. Contrato</th><th>Val. Calibração</th><th>Val. Treinamento</th>
+    </tr>`;
+
+    const inicio = paginaContratos * POR_PAGINA;
+    const pagina = filtrado.slice(inicio, inicio + POR_PAGINA);
+
+    tbody.innerHTML = pagina.map(e => {
+      const alerta = isVencidoVigente(e);
+      return `<tr style="${alerta ? 'background:#fff1f2;' : ''}">
+        <td style="font-size:12px;white-space:nowrap">${alerta ? '<span title="Vencido mas Vigente" style="margin-right:4px">⚠️</span>' : ''}${e.contrato || '—'}</td>
+        <td class="td-ellipsis" title="${e.cliente||''}">${e.cliente || '—'}</td>
+        <td style="font-size:12px">${e.cnpj || '—'}</td>
+        <td class="td-ellipsis" title="${e.descricao||''}">${e.descricao || '—'}</td>
+        <td><strong>${e.nSerie || '—'}</strong></td>
+        <td>${statusBadge(e.situacaoContrato)}</td>
+        <td>${statusBadge(e.statusEquip)}</td>
+        <td>${vencBadge(e.validadeContrato)}</td>
+        <td>${vencBadge(e.vencCalib)}</td>
+        <td>${vencBadge(e.vencTrein)}</td>
+      </tr>`;
+    }).join('');
+
+    renderPagination('pag-contratos', filtrado.length, POR_PAGINA, paginaContratos, 'renderContratos');
+  }
+}
+
+// ============================================================
+// CADASTRO / EDIÇÃO DE EQUIPAMENTO
+// ============================================================
+let equipAtualId = null;
+let modoLote = false;
+
+function setModoLote(lote) {
+  modoLote = lote;
+  document.getElementById('campo-serie-individual').style.display = lote ? 'none' : '';
+  document.getElementById('campo-serie-lote').style.display = lote ? '' : 'none';
+  document.getElementById('tab-individual').style.cssText = !lote
+    ? 'padding:6px 14px;border-radius:6px;border:1px solid #0f3460;background:#0f3460;color:white;font-size:12px;cursor:pointer;font-weight:600'
+    : 'padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;background:white;color:#64748b;font-size:12px;cursor:pointer;font-weight:600';
+  document.getElementById('tab-lote').style.cssText = lote
+    ? 'padding:6px 14px;border-radius:6px;border:1px solid #0f3460;background:#0f3460;color:white;font-size:12px;cursor:pointer;font-weight:600'
+    : 'padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;background:white;color:#64748b;font-size:12px;cursor:pointer;font-weight:600';
+  if (lote) {
+    document.getElementById('f-nSerie-lote').focus();
+    atualizarContadorLote();
+  }
+}
+
+function atualizarContadorLote() {
+  const series = parseSeries(document.getElementById('f-nSerie-lote').value);
+  const el = document.getElementById('lote-contador');
+  el.textContent = series.length > 0 ? `${series.length} número${series.length > 1 ? 's' : ''}` : '';
+}
+
+function parseSeries(texto) {
+  return texto.split(/[\n,;]/).map(s => s.trim()).filter(s => s.length > 0);
+}
+
+function abrirFormEquip(id = null) {
+  equipAtualId = id;
+  modoLote = false;
+  setModoLote(false);
+  const overlay = document.getElementById('modal-overlay');
+  document.getElementById('modal-titulo').textContent = id ? 'Editar Equipamento' : 'Novo Equipamento';
+  document.getElementById('btn-excluir-equip').style.display = id ? 'inline-block' : 'none';
+  // Esconde abas no modo edição (não faz sentido lote ao editar)
+  document.getElementById('modal-tabs').style.display = id ? 'none' : 'flex';
+
+  const campos = ['id','nSerie','statusEquip','codigo','descricao','categoria','marca',
+    'contrato','situacaoContrato','validadeContrato','notaFiscal','dataEmissaoNF',
+    'mesesCalibracao','dataUltimaCalibracao','vencCalib','dataTreinamento','vencTrein','observacao'];
+  campos.forEach(c => {
+    const el = document.getElementById('f-' + c);
+    if (el) el.value = '';
+  });
+  // Limpar autocomplete de cliente
+  limparClienteAC();
+
+  if (id === null) {
+    document.getElementById('f-situacaoContrato').value = 'Vigente';
+    document.getElementById('f-statusEquip').value = 'ATIVO';
+    document.getElementById('f-mesesCalibracao').value = '12';
+  }
+
+  overlay.classList.add('open');
+  document.getElementById('f-nSerie').focus();
+}
+
+async function abrirFormEquipComDados(id) {
+  const e = await db.equipamentos.get(id);
+  if (!e) return;
+  abrirFormEquip(id);
+  document.getElementById('f-id').value = e.id;
+  const camposSimples = {
+    nSerie: e.nSerie, statusEquip: e.statusEquip, codigo: e.codigo, descricao: e.descricao,
+    categoria: e.categoria, marca: e.marca, contrato: e.contrato,
+    situacaoContrato: e.situacaoContrato, validadeContrato: e.validadeContrato || '',
+    notaFiscal: e.notaFiscal, dataEmissaoNF: e.dataEmissaoNF || '',
+    mesesCalibracao: e.mesesCalibracao,
+    dataUltimaCalibracao: e.dataUltimaCalibracao || '', vencCalib: e.vencCalib || '',
+    dataTreinamento: e.dataTreinamento || '', vencTrein: e.vencTrein || '',
+    observacao: e.observacao,
+  };
+  Object.entries(camposSimples).forEach(([k, v]) => {
+    const el = document.getElementById('f-' + k);
+    if (el && v !== null && v !== undefined) el.value = v;
+  });
+  // Preencher autocomplete do cliente com dados existentes
+  if (e.cliente || e.cnpj) {
+    document.getElementById('f-cliente-busca').value = e.cliente || e.cnpj;
+    document.getElementById('f-cliente').value = e.cliente || '';
+    document.getElementById('f-cnpj').value = e.cnpj || '';
+    document.getElementById('f-cidade').value = e.cidade || '';
+    document.getElementById('f-estado').value = e.estado || '';
+    document.getElementById('f-siglaEstado').value = e.siglaEstado || '';
+    document.getElementById('f-regiao').value = e.regiao || '';
+    document.getElementById('f-cliente-clear').style.display = 'block';
+  }
+}
+
+function fecharFormEquip(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// Autocomplete de cliente no formulário de equipamento
+async function buscarClientesAC() {
+  const busca = document.getElementById('f-cliente-busca').value.toLowerCase();
+  const dropdown = document.getElementById('f-cliente-dropdown');
+
+  const [cadastrados, equips] = await Promise.all([db.clientes.toArray(), db.equipamentos.toArray()]);
+
+  const mapa = new Map();
+  equips.forEach(e => {
+    if (!e.cnpj || mapa.has(e.cnpj)) return;
+    mapa.set(e.cnpj, { razaoSocial: e.cliente || e.cnpj, cnpj: e.cnpj, cidade: e.cidade, estado: e.estado, siglaEstado: e.siglaEstado, regiao: e.regiao });
+  });
+  cadastrados.forEach(c => { if (c.cnpj) mapa.set(c.cnpj, { ...mapa.get(c.cnpj), ...c }); });
+
+  const lista = [...mapa.values()].sort((a, b) => (a.razaoSocial||'').localeCompare(b.razaoSocial||''));
+  const filtrado = !busca ? lista : lista.filter(c =>
+    (c.razaoSocial||'').toLowerCase().includes(busca) || (c.cnpj||'').includes(busca)
+  );
+
+  if (filtrado.length === 0) {
+    dropdown.innerHTML = '<div style="padding:12px 16px;color:#94a3b8;font-size:13px">Nenhum cliente encontrado. Cadastre primeiro na página Clientes.</div>';
+  } else {
+    dropdown.innerHTML = filtrado.slice(0, 25).map(c => {
+      const safe = encodeURIComponent(JSON.stringify(c));
+      return `<div onclick="selecionarClienteAC(decodeURIComponent('${safe}'))"
+        style="padding:10px 16px;cursor:pointer;border-bottom:1px solid #f1f5f9"
+        onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+        <div style="font-size:13px;font-weight:600;color:#1e293b">${c.razaoSocial || c.cnpj}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px">${[c.cnpj, c.cidade, c.siglaEstado].filter(Boolean).join(' · ')}</div>
+      </div>`;
+    }).join('');
+  }
+  dropdown.style.display = 'block';
+}
+
+function selecionarClienteAC(jsonStr) {
+  const c = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+  document.getElementById('f-cliente-busca').value = c.razaoSocial || c.cnpj;
+  document.getElementById('f-cliente').value = c.razaoSocial || c.cnpj;
+  document.getElementById('f-cnpj').value = c.cnpj || '';
+  document.getElementById('f-cidade').value = c.cidade || '';
+  document.getElementById('f-estado').value = c.estado || '';
+  document.getElementById('f-siglaEstado').value = c.siglaEstado || '';
+  document.getElementById('f-regiao').value = c.regiao || '';
+  document.getElementById('f-cliente-dropdown').style.display = 'none';
+  document.getElementById('f-cliente-clear').style.display = 'block';
+}
+
+function limparClienteAC() {
+  ['f-cliente-busca','f-cliente','f-cnpj','f-cidade','f-estado','f-siglaEstado','f-regiao'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-cliente-clear').style.display = 'none';
+  document.getElementById('f-cliente-dropdown').style.display = 'none';
+  document.getElementById('f-cliente-busca').focus();
+}
+
+document.addEventListener('click', e => {
+  const dropdown = document.getElementById('f-cliente-dropdown');
+  if (dropdown && !dropdown.contains(e.target) && e.target.id !== 'f-cliente-busca') {
+    dropdown.style.display = 'none';
+  }
+});
+
+function calcVencimentos() {
+  const data = document.getElementById('f-dataUltimaCalibracao').value;
+  const meses = parseInt(document.getElementById('f-mesesCalibracao').value);
+  if (data && meses > 0) {
+    const d = new Date(data + 'T00:00:00');
+    d.setMonth(d.getMonth() + meses);
+    document.getElementById('f-vencCalib').value = d.toISOString().split('T')[0];
+  }
+}
+
+function calcVencTrein() {
+  const data = document.getElementById('f-dataTreinamento').value;
+  if (data) {
+    const d = new Date(data + 'T00:00:00');
+    d.setMonth(d.getMonth() + 12);
+    document.getElementById('f-vencTrein').value = d.toISOString().split('T')[0];
+  }
+}
+
+async function salvarEquip() {
+  // Coletar N° de série(s)
+  let series;
+  if (modoLote) {
+    series = parseSeries(document.getElementById('f-nSerie-lote').value);
+    if (series.length === 0) { alert('Digite ao menos um número de série.'); document.getElementById('f-nSerie-lote').focus(); return; }
+  } else {
+    const v = document.getElementById('f-nSerie').value.trim();
+    if (!v) { alert('N° de série é obrigatório.'); document.getElementById('f-nSerie').focus(); return; }
+    series = [v];
+  }
+
+  const dadosBase = {
+    statusEquip: document.getElementById('f-statusEquip').value || null,
+    codigo: document.getElementById('f-codigo').value.trim() || null,
+    descricao: document.getElementById('f-descricao').value.trim() || null,
+    categoria: document.getElementById('f-categoria').value || null,
+    marca: document.getElementById('f-marca').value || null,
+    contrato: document.getElementById('f-contrato').value.trim() || null,
+    situacaoContrato: document.getElementById('f-situacaoContrato').value || null,
+    validadeContrato: document.getElementById('f-validadeContrato').value || null,
+    notaFiscal: document.getElementById('f-notaFiscal').value.trim() || null,
+    dataEmissaoNF: document.getElementById('f-dataEmissaoNF').value || null,
+    cliente: document.getElementById('f-cliente').value.trim() || null,
+    cnpj: document.getElementById('f-cnpj').value.trim() || null,
+    cidade: document.getElementById('f-cidade').value.trim() || null,
+    estado: document.getElementById('f-estado').value.trim() || null,
+    siglaEstado: document.getElementById('f-siglaEstado').value.trim().toUpperCase() || null,
+    regiao: document.getElementById('f-regiao').value.trim() || null,
+    mesesCalibracao: parseInt(document.getElementById('f-mesesCalibracao').value) || null,
+    dataUltimaCalibracao: document.getElementById('f-dataUltimaCalibracao').value || null,
+    vencCalib: document.getElementById('f-vencCalib').value || null,
+    dataTreinamento: document.getElementById('f-dataTreinamento').value || null,
+    vencTrein: document.getElementById('f-vencTrein').value || null,
+    observacao: document.getElementById('f-observacao').value.trim() || null,
+    fonte: 'MANUAL',
+  };
+
+  const idVal = document.getElementById('f-id').value;
+  if (idVal) {
+    // Edição — atualiza o registro existente
+    await db.equipamentos.update(idVal, { ...dadosBase, nSerie: series[0] });
+  } else if (series.length === 1) {
+    await db.equipamentos.add({ ...dadosBase, nSerie: series[0] });
+  } else {
+    // Lote — cria um registro por N° de série
+    await db.equipamentos.bulkAdd(series.map(ns => ({ ...dadosBase, nSerie: ns })));
+  }
+
+  document.getElementById('modal-overlay').classList.remove('open');
+  dadosRastFiltrado = null;
+  dadosContratosFiltrado = null;
+  renderRastreabilidade();
+
+  if (series.length > 1) {
+    // Feedback visual para lote
+    const msg = document.createElement('div');
+    msg.textContent = `✅ ${series.length} equipamentos cadastrados com sucesso`;
+    msg.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#0f3460;color:white;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.2)';
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 3500);
+  }
+}
+
+async function excluirEquip() {
+  const idVal = document.getElementById('f-id').value;
+  if (!idVal) return;
+  if (!confirm('Tem certeza que deseja excluir este equipamento?')) return;
+  await db.equipamentos.delete(idVal);
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('detalhe-equip').style.display = 'none';
+  dadosRastFiltrado = null;
+  dadosContratosFiltrado = null;
+  renderRastreabilidade();
+}
+
+let equipDetalheAtualId = null;
+
+function editarEquipAtual() {
+  if (equipDetalheAtualId) abrirFormEquipComDados(equipDetalheAtualId);
+}
+
+// ============================================================
+// RASTREABILIDADE
+// ============================================================
+let paginaRast = 0, dadosRastFiltrado = null;
+
+async function renderRastreabilidade(pag) {
+  if (pag !== undefined) paginaRast = pag;
+  const busca = document.getElementById('rast-busca').value.toLowerCase();
+  const sts = document.getElementById('rast-status').value;
+  const venc = document.getElementById('rast-venc').value;
+
+  const todos = await db.equipamentos.toArray();
+
+  let filtrado = todos.filter(e => {
+    const ok1 = !busca || [e.nSerie, e.contrato, e.cliente, e.cnpj, e.descricao, e.codigo].some(v => (v||'').toLowerCase().includes(busca));
+    const ok2 = !sts || e.statusEquip === sts;
+    let ok3 = true;
+    if (venc === 'calib30') ok3 = isVencendo(e.vencCalib, 30);
+    else if (venc === 'trein30') ok3 = isVencendo(e.vencTrein, 30);
+    else if (venc === 'contrato30') ok3 = isVencendo(e.validadeContrato, 30);
+    else if (venc === 'calibvencido') ok3 = isVencido(e.vencCalib);
+    else if (venc === 'treinvencido') ok3 = isVencido(e.vencTrein);
+    return ok1 && ok2 && ok3;
+  });
+
+  dadosRastFiltrado = filtrado;
+  document.getElementById('count-rast').textContent = `${filtrado.length.toLocaleString('pt-BR')} equipamentos`;
+
+  const inicio = paginaRast * POR_PAGINA;
+  const pagina = filtrado.slice(inicio, inicio + POR_PAGINA);
+
+  const tbody = document.getElementById('tbody-rast');
+  if (filtrado.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10"><div class="no-data"><div class="no-data-icon">🔍</div><p>Nenhum equipamento encontrado</p></div></td></tr>';
+    document.getElementById('pag-rast').innerHTML = '';
+    document.getElementById('detalhe-equip').style.display = 'none';
+    return;
+  }
+
+  tbody.innerHTML = pagina.map(e => `
+    <tr style="cursor:pointer" onclick="mostrarDetalhe('${e.id}')">
+      <td><strong>${e.nSerie || '—'}</strong></td>
+      <td class="td-ellipsis" title="${e.cliente||''}">${e.cliente || '—'}</td>
+      <td style="font-size:12px">${e.contrato || '—'}</td>
+      <td class="td-ellipsis" title="${e.descricao||''}">${e.descricao || '—'}</td>
+      <td>${statusBadge(e.statusEquip)}</td>
+      <td>${fmtDate(e.dataUltimaCalibracao)}</td>
+      <td>${vencBadge(e.vencCalib)}</td>
+      <td>${fmtDate(e.dataTreinamento)}</td>
+      <td>${vencBadge(e.vencTrein)}</td>
+      <td>${vencBadge(e.validadeContrato)}</td>
+    </tr>
+  `).join('');
+
+  renderPagination('pag-rast', filtrado.length, POR_PAGINA, paginaRast, 'renderRastreabilidade');
+}
+
+async function mostrarDetalhe(id) {
+  const e = await db.equipamentos.get(id);
+  if (!e) return;
+  equipDetalheAtualId = id;
+  const box = document.getElementById('detalhe-equip');
+  box.style.display = 'block';
+  document.getElementById('detalhe-grid').innerHTML = [
+    ['N° Série', `<strong>${e.nSerie || '—'}</strong>`],
+    ['Status Equip.', statusBadge(e.statusEquip)],
+    ['Contrato', e.contrato],
+    ['Situação Contrato', statusBadge(e.situacaoContrato)],
+    ['Cliente', e.cliente],
+    ['CNPJ', e.cnpj],
+    ['Cidade', e.cidade],
+    ['Estado', e.siglaEstado],
+    ['Região', e.regiao],
+    ['Produto', e.descricao],
+    ['Código', e.codigo],
+    ['Categoria', e.categoria],
+    ['Marca', e.marca],
+    ['Nota Fiscal', e.notaFiscal],
+    ['Emissão NF', fmtDate(e.dataEmissaoNF)],
+    ['Validade Contrato', vencBadge(e.validadeContrato)],
+    ['Meses Calibração', e.mesesCalibracao ? e.mesesCalibracao + ' meses' : '—'],
+    ['Últ. Calibração', fmtDate(e.dataUltimaCalibracao)],
+    ['Venc. Calibração', vencBadge(e.vencCalib)],
+    ['Últ. Treinamento', fmtDate(e.dataTreinamento)],
+    ['Venc. Treinamento', vencBadge(e.vencTrein)],
+    ['Observação', e.observacao],
+  ].map(([l, v]) => `
+    <div class="detalhe-field">
+      <label>${l}</label>
+      <span>${v || '—'}</span>
+    </div>
+  `).join('');
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ============================================================
+// VENDAS
+// ============================================================
+let paginaVendas = 0, dadosVendasFiltrado = null;
+
+async function renderVendas(pag) {
+  if (pag !== undefined) paginaVendas = pag;
+  const busca = document.getElementById('v-busca').value.toLowerCase();
+  const marca = document.getElementById('v-marca').value;
+  const posicao = document.getElementById('v-posicao').value;
+  const mes = document.getElementById('v-mes').value;
+
+  const todos = await db.vendas.toArray();
+
+  let filtrado = todos.filter(e => {
+    const ok1 = !busca || [e.cliente, e.pedido, e.equipamento, e.cnpj, e.notaFiscal].some(v => (v||'').toLowerCase().includes(busca));
+    const ok2 = !marca || e.marca === marca;
+    const ok3 = !posicao || (e.posicaoPagamento || '').includes(posicao);
+    const ok4 = !mes || (e.fechamento && e.fechamento.startsWith(mes));
+    return ok1 && ok2 && ok3 && ok4;
+  });
+
+  dadosVendasFiltrado = filtrado;
+  document.getElementById('count-vendas').textContent = `${filtrado.length.toLocaleString('pt-BR')} registros`;
+
+  const totalVendas = filtrado.reduce((s, e) => s + (Number(e.valorVenda) || 0), 0);
+  const totalFat = filtrado.filter(e => e.faturado === 'FATURADO').reduce((s, e) => s + (Number(e.valorVenda) || 0), 0);
+  const totalCom = filtrado.reduce((s, e) => s + (Number(e.comissaoEstimada) || 0), 0);
+  const totalRec = filtrado.reduce((s, e) => s + Math.abs(Number(e.valorAPagar) || 0), 0);
+
+  document.getElementById('v-total').textContent = fmtMoeda(totalVendas);
+  document.getElementById('v-fat').textContent = fmtMoeda(totalFat);
+  document.getElementById('v-com').textContent = fmtMoeda(totalCom);
+  document.getElementById('v-rec').textContent = fmtMoeda(totalRec);
+
+  const inicio = paginaVendas * POR_PAGINA;
+  const pagina = filtrado.slice(inicio, inicio + POR_PAGINA);
+
+  const tbody = document.getElementById('tbody-vendas');
+  if (filtrado.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="12"><div class="no-data"><div class="no-data-icon">💰</div><p>Nenhuma venda encontrada</p></div></td></tr>';
+    document.getElementById('pag-vendas').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = pagina.map(e => `
+    <tr>
+      <td style="white-space:nowrap">${fmtDate(e.fechamento)}</td>
+      <td>${e.pedido || '—'}</td>
+      <td>${e.notaFiscal || '—'}</td>
+      <td class="td-ellipsis" title="${e.cliente||''}">${e.cliente || '—'}</td>
+      <td class="td-ellipsis" title="${e.equipamento||''}">${e.equipamento || '—'}</td>
+      <td style="text-align:center">${e.quantidade || '—'}</td>
+      <td style="white-space:nowrap">${fmtMoeda(e.valorVenda)}</td>
+      <td style="text-align:center">${e.nParcelas || '—'}</td>
+      <td style="white-space:nowrap">${fmtMoeda(e.valorPago)}</td>
+      <td style="white-space:nowrap">${fmtMoeda(Math.abs(Number(e.valorAPagar)||0))}</td>
+      <td>${statusBadge(e.posicaoPagamento)}</td>
+      <td>${e.comissaoPerc ? (Number(e.comissaoPerc)*100).toFixed(1)+'%' : '—'}</td>
+    </tr>
+  `).join('');
+
+  renderPagination('pag-vendas', filtrado.length, POR_PAGINA, paginaVendas, 'renderVendas');
+}
+
+// ============================================================
+// CONSUMO
+// ============================================================
+let paginaConsumo = 0, dadosConsumoFiltrado = null;
+
+async function renderConsumo(pag) {
+  if (pag !== undefined) paginaConsumo = pag;
+  const busca = document.getElementById('cons-busca').value.toLowerCase();
+  const mes = document.getElementById('cons-mes').value;
+  const classif = document.getElementById('cons-classif').value;
+
+  const todos = await db.consumo.toArray();
+
+  let filtrado = todos.filter(e => {
+    const ok1 = !busca || [e.cliente, e.cnpj].some(v => (v||'').toLowerCase().includes(busca));
+    const ok2 = !mes || (e.dataInicio && e.dataInicio.startsWith(mes));
+    const ok3 = !classif || (e.classificacao||'').includes(classif);
+    return ok1 && ok2 && ok3;
+  });
+
+  dadosConsumoFiltrado = filtrado;
+  document.getElementById('count-consumo').textContent = `${filtrado.length.toLocaleString('pt-BR')} registros`;
+
+  const inicio = paginaConsumo * POR_PAGINA;
+  const pagina = filtrado.slice(inicio, inicio + POR_PAGINA);
+
+  const tbody = document.getElementById('tbody-consumo');
+  if (filtrado.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11"><div class="no-data"><div class="no-data-icon">📦</div><p>Nenhum registro encontrado</p></div></td></tr>';
+    document.getElementById('pag-consumo').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = pagina.map(e => {
+    const classifClass = e.classificacao === 'VERIFIQUE CONSUMO' ? 'badge-red' : e.classificacao === 'ATENÇÃO' ? 'badge-orange' : 'badge-green';
+    return `<tr>
+      <td class="td-ellipsis" title="${e.cliente||''}">${e.cliente || '—'}</td>
+      <td style="font-size:12px">${e.cnpj || '—'}</td>
+      <td style="white-space:nowrap;font-size:12px">${fmtDate(e.dataInicio)} – ${fmtDate(e.dataFim)}</td>
+      <td style="text-align:center">${e.nEquipos ?? 0}</td>
+      <td style="text-align:center">${e.consumoEquipos ?? 0}</td>
+      <td style="text-align:center">${e.nSeringas ?? 0}</td>
+      <td style="text-align:center">${e.consumoSeringas ?? 0}</td>
+      <td style="text-align:center">${e.nExtensores ?? 0}</td>
+      <td style="text-align:center">${e.consumoExtensores ?? 0}</td>
+      <td><span class="badge ${classifClass}">${e.classificacao || '—'}</span></td>
+      <td>${vencBadge(e.vencimentoContrato)}</td>
+    </tr>`;
+  }).join('');
+
+  renderPagination('pag-consumo', filtrado.length, POR_PAGINA, paginaConsumo, 'renderConsumo');
+}
+
+// ============================================================
+// IMPORTAR DADOS
+// ============================================================
+function logImport(msg, type = 'info') {
+  const el = document.getElementById('import-log');
+  el.style.display = 'block';
+  const cores = { info: '#7ee787', warn: '#f0e68c', error: '#ff7b72', success: '#79c0ff' };
+  el.innerHTML += `<div style="color:${cores[type]||cores.info}">[${new Date().toLocaleTimeString('pt-BR')}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function parseDate(val) {
+  if (val === null || val === undefined || val === '') return null;
+  if (val instanceof Date) return isNaN(val.getTime()) ? null : val.toISOString().split('T')[0];
+  if (typeof val === 'number') {
+    // Excel serial date
+    const d = new Date(Math.round((val - 25569) * 86400000));
+    return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+  }
+  if (typeof val === 'string') {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+  }
+  return null;
+}
+
+async function importFile(file) {
+  if (!file) return;
+  document.getElementById('import-log').innerHTML = '';
+  logImport(`Lendo arquivo: <strong>${file.name}</strong> (${(file.size/1024/1024).toFixed(1)} MB)`);
+
+  const reader = new FileReader();
+  reader.onload = async (evt) => {
+    try {
+      const wb = XLSX.read(evt.target.result, { type: 'array', cellDates: true });
+      logImport(`Abas encontradas: ${wb.SheetNames.join(', ')}`);
+
+      await db.equipamentos.clear();
+      await db.vendas.clear();
+      await db.consumo.clear();
+      await db.metas.clear();
+      logImport('Base de dados limpa. Iniciando importação...');
+
+      // BISTR
+      if (wb.SheetNames.includes('BISTR')) {
+        logImport('Importando BISTR (equipamentos ativos)...');
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['BISTR'], { defval: null });
+        const equips = rows.map(r => ({
+          contrato: r['CONTRATO'] || null,
+          validadeContrato: parseDate(r['VALIDADE CONTRATO']),
+          situacaoContrato: r['SITUAÇÃO CONTRATO'] || null,
+          clifor: r['CLIFOR'] ? String(r['CLIFOR']) : null,
+          loja: r['LOJA'] || null,
+          cnpj: r['CNPJ/CPF'] ? String(r['CNPJ/CPF']) : null,
+          cliente: r['CLIENTE (FÓRMULA)'] || null,
+          cidade: r['CIDADE (FÓRMULA)'] || null,
+          estado: r['ESTADO (FÓRMULA)'] || null,
+          siglaEstado: r['SIGLA ESTADO (FÓRMULA)'] || null,
+          pais: r['PAÍS (FÓRMULA)'] || null,
+          regiao: r['REGIÃO (FÓRMULA)'] || null,
+          codigo: r['CÓDIGO'] ? String(r['CÓDIGO']) : null,
+          descricao: r['DESCRIÇÃO (FÓRMULA)'] || null,
+          equipos: r['EQUIPOS'] || null,
+          seringas: r['SERINGAS'] || null,
+          extensores: r['EXTENSORES'] || null,
+          categoria: r['CATEGORIA (FÓRMULA)'] || null,
+          marca: r['MARCA (FÓRMULA)'] || null,
+          dataEmissaoNF: parseDate(r['DATA EMISSÃO NF']),
+          notaFiscal: r['NOTA FISCAL'] ? String(r['NOTA FISCAL']) : null,
+          dataEncerramento: parseDate(r['DATA ENCERRAMENTO']),
+          statusEquip: r['STATUS EQUIP.'] || null,
+          nSerie: r['N. SÉRIE'] ? String(r['N. SÉRIE']) : null,
+          mesesCalibracao: r['MESES (CALIBRAÇÃO)'] || null,
+          dataUltimaCalibracao: parseDate(r['DATA ÚLTIMA CALIBRAÇÃO']),
+          vencCalib: parseDate(r['VENCIMENTO CALIBRAÇÃO (FÓRMULA)']),
+          dataTreinamento: parseDate(r['DATA TREINAMENTO']),
+          vencTrein: parseDate(r['VENCIMENTO TREINAMENTO (FÓRMULA)']),
+          observacao: r['OBSERVAÇÃO'] || null,
+          dataDevol: parseDate(r['DATA DEVOL EQUIP HMN']),
+          fonte: 'BISTR'
+        }));
+        await db.equipamentos.bulkAdd(equips);
+        logImport(`✓ BISTR: ${equips.length.toLocaleString('pt-BR')} equipamentos`, 'success');
+      }
+
+      // BISTR.OLD
+      if (wb.SheetNames.includes('BISTR.OLD')) {
+        logImport('Importando BISTR.OLD (histórico)...');
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['BISTR.OLD'], { defval: null });
+        const equips = rows.map(r => ({
+          contrato: r['CONTRATO'] || null,
+          validadeContrato: parseDate(r['VALIDADE CONTRATO']),
+          situacaoContrato: r['SITUAÇÃO CONTRATO'] || null,
+          clifor: r['CLIFOR'] ? String(r['CLIFOR']) : null,
+          loja: r['LOJA'] || null,
+          cnpj: r['CNPJ/CPF'] ? String(r['CNPJ/CPF']) : null,
+          cliente: r['CLIENTE (FÓRMULA)'] || null,
+          cidade: r['CIDADE (FÓRMULA)'] || null,
+          estado: r['ESTADO (FÓRMULA)'] || null,
+          siglaEstado: r['SIGLA ESTADO (FÓRMULA)'] || null,
+          regiao: r['REGIÃO (FÓRMULA)'] || null,
+          codigo: r['CÓDIGO'] ? String(r['CÓDIGO']) : null,
+          descricao: r['DESCRIÇÃO (FÓRMULA)'] || null,
+          categoria: r['CATEGORIA (FÓRMULA)'] || null,
+          marca: r['MARCA (FÓRMULA)'] || null,
+          dataEmissaoNF: parseDate(r['DATA EMISSÃO NF']),
+          notaFiscal: r['NOTA FISCAL'] ? String(r['NOTA FISCAL']) : null,
+          dataEncerramento: parseDate(r['DATA ENCERRAMENTO']),
+          statusEquip: r['STATUS EQUIP.'] || null,
+          nSerie: r['N. SÉRIE'] ? String(r['N. SÉRIE']) : null,
+          mesesCalibracao: r['MESES (CALIBRAÇÃO)'] || null,
+          dataUltimaCalibracao: parseDate(r['DATA ÚLTIMA CALIBRAÇÃO']),
+          vencCalib: parseDate(r['VENCIMENTO CALIBRAÇÃO (FÓRMULA)']),
+          dataTreinamento: parseDate(r['DATA TREINAMENTO']),
+          vencTrein: parseDate(r['VENCIMENTO TREINAMENTO (FÓRMULA)']),
+          observacao: r['OBSERVAÇÕES'] || null,
+          fonte: 'BISTR.OLD'
+        }));
+        await db.equipamentos.bulkAdd(equips);
+        logImport(`✓ BISTR.OLD: ${equips.length.toLocaleString('pt-BR')} equipamentos históricos`, 'success');
+      }
+
+      // BDSTRVendas
+      if (wb.SheetNames.includes('BDSTRVendas')) {
+        logImport('Importando BDSTRVendas...');
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['BDSTRVendas'], { defval: null });
+        const vendas = rows.map(r => ({
+          fechamento: parseDate(r['FECHAMENTO']),
+          pedido: r['PEDIDO'] ? String(r['PEDIDO']) : null,
+          notaFiscal: r['NOTA FISCAL'] ? String(r['NOTA FISCAL']) : null,
+          modalidade: r['MODALIDADE DE NEGÓCIO'] || null,
+          cnpj: r['CNPJ'] ? String(r['CNPJ']) : null,
+          cliente: r['CLIENTE (FÓRMULA)'] || null,
+          cidade: r['CIDADE (FÓRMULA)'] || null,
+          regiao: r['REGIÃO (FÓRMULA)'] || null,
+          marca: r['MARCA (FÓRMULA)'] || null,
+          categoria: r['CATEGORIA (FÓRMULA)'] || null,
+          equipamento: r['EQUIPAMENTO'] || null,
+          codigo: r['CÓDIGO'] ? String(r['CÓDIGO']) : null,
+          quantidade: r['QUANTIDADE'] || null,
+          valorUni: r['VALOR (UNI)'] || null,
+          valorVenda: r['VALOR DE VENDA (FÓRMULA)'] || null,
+          nParcelas: r['Nº PARCELAS'] || null,
+          valorPago: r['VALOR PAGO (FÓRMULA)'] || null,
+          valorAPagar: r['VALOR A PAGAR (FÓRMULA)'] || null,
+          dataFaturamento: parseDate(r['DATA DO FATURAMENTO']),
+          faturado: r['FATURADO (FÓRMULA)'] || null,
+          posicaoPagamento: r['POSIÇÃO DE PAGAMENTO (FÓRMULA)'] || null,
+          observacoes: r['OBSERVAÇÕES'] || null,
+          comissaoPerc: r['% COMISSÃO REP'] || null,
+          comissaoEstimada: r['VLR. COMISSÃO ESTIMADA (FÓRMULA)'] || null,
+        }));
+        await db.vendas.bulkAdd(vendas);
+        logImport(`✓ BDSTRVendas: ${vendas.length.toLocaleString('pt-BR')} registros de venda`, 'success');
+      }
+
+      // STRConsumo
+      for (const abaConsumo of ['STRConsumo', 'STRConsumo_NV']) {
+        if (wb.SheetNames.includes(abaConsumo)) {
+          logImport(`Importando ${abaConsumo}...`);
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[abaConsumo], { defval: null });
+          const consumo = rows.map(r => ({
+            dataInicio: parseDate(r['DATA INÍCIO']),
+            dataFim: parseDate(r['DATA FIM']),
+            cnpj: r['CPF/CNPJ'] ? String(r['CPF/CNPJ']) : null,
+            cliente: r['CLIENTE'] || null,
+            nEquipos: r['Nº EQUIPOS'] || 0,
+            consumoEquipos: r['CONSUMO ATUAL EQUIPOS'] || 0,
+            equipos: r['EQUIPOS'] || 0,
+            nSeringas: r['Nº DE SERINGAS'] || 0,
+            consumoSeringas: r['CONSUMO ATUAL SERINGAS'] || 0,
+            seringas: r['SERINGAS'] || 0,
+            nExtensores: r['Nº DE EXTENSORES'] || 0,
+            consumoExtensores: r['CONSUMO ATUAL EXTENSORES'] || 0,
+            extensores: r['EXTENSORES'] || 0,
+            classificacao: r['CLASSIFICAÇÃO'] || null,
+            vencimentoContrato: parseDate(r['VENCIMENTO CONTRATO']),
+            fonte: abaConsumo
+          }));
+          await db.consumo.bulkAdd(consumo);
+          logImport(`✓ ${abaConsumo}: ${consumo.length.toLocaleString('pt-BR')} registros`, 'success');
+          break; // Usa a primeira que encontrar
+        }
+      }
+
+      // BDClientes
+      if (wb.SheetNames.includes('BDClientes')) {
+        logImport('Importando BDClientes...');
+        await db.clientes.clear();
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['BDClientes'], { defval: null });
+        const clientes = rows.filter(r => r['CNPJ'] || r['RAZÃO SOCIAL']).map(r => ({
+          razaoSocial: r['RAZÃO SOCIAL'] || null,
+          cnpj: r['CNPJ'] ? String(r['CNPJ']) : null,
+          cidade: r['CIDADE'] || null,
+          estado: null, siglaEstado: null, regiao: null, endereco: null, observacao: null,
+        }));
+        await db.clientes.bulkAdd(clientes);
+        logImport(`✓ BDClientes: ${clientes.length.toLocaleString('pt-BR')} clientes importados`, 'success');
+      }
+
+      // Metas
+      if (wb.SheetNames.includes('Metas')) {
+        logImport('Importando Metas...');
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Metas'], { defval: null });
+        const metas = rows.map(r => ({
+          dataInicial: parseDate(r['DATA INICIAL']),
+          dataFinal: parseDate(r['DATA FINAL']),
+          marca: r['MARCA'] || null,
+          meta: r['META'] || 0,
+          realizado: r['REALIZADO'] || 0,
+        }));
+        await db.metas.bulkAdd(metas);
+        logImport(`✓ Metas: ${metas.length.toLocaleString('pt-BR')} registros`, 'success');
+      }
+
+      logImport('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logImport('✅ Importação concluída com sucesso!', 'success');
+      logImport('Clique em <strong>Dashboard</strong> para ver os dados.');
+
+      await loadImportStatus();
+
+      // Resetar caches
+      dadosContratosFiltrado = null;
+      dadosRastFiltrado = null;
+      dadosVendasFiltrado = null;
+      dadosConsumoFiltrado = null;
+
+    } catch (err) {
+      logImport(`❌ ERRO: ${err.message}`, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function loadImportStatus() {
+  document.getElementById('import-stats').innerHTML = '<div style="color:#64748b;font-size:13px;padding:8px">Carregando...</div>';
+  const [eqCount, vdCount, csCount, mtCount, clCount] = await Promise.all([
+    db.equipamentos.count(),
+    db.vendas.count(),
+    db.consumo.count(),
+    db.metas.count(),
+    db.clientes.count(),
+  ]);
+  const counts = {
+    'Equipamentos': eqCount,
+    'Clientes': clCount,
+    'Vendas': vdCount,
+    'Consumo': csCount,
+    'Metas': mtCount,
+  };
+  const box = document.getElementById('import-status-box');
+  if (Object.values(counts).some(c => c > 0)) {
+    box.style.display = 'block';
+    document.getElementById('import-stats').innerHTML = Object.entries(counts).map(([label, count]) => `
+      <div class="card ${count > 0 ? 'green' : 'blue'}">
+        <div class="card-label">${label}</div>
+        <div class="card-value">${count.toLocaleString('pt-BR')}</div>
+        <div class="card-sub">registros</div>
+      </div>
+    `).join('');
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+async function confirmarLimpar() {
+  if (!confirm('Tem certeza que deseja limpar toda a base de dados? Esta ação não pode ser desfeita.')) return;
+  const btn = document.querySelector('.btn-danger');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Limpando...'; }
+  await Promise.all([
+    db.equipamentos.clear(),
+    db.vendas.clear(),
+    db.consumo.clear(),
+    db.metas.clear(),
+    db.clientes.clear(),
+  ]);
+  if (btn) { btn.disabled = false; btn.innerHTML = '🗑️ Limpar Base de Dados'; }
+  alert('Base de dados limpa com sucesso.');
+  await loadImportStatus();
+}
+
+// Drag and drop
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) importFile(file);
+});
+
+// ============================================================
+// AUTENTICAÇÃO
+// ============================================================
+async function fazerLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const erroEl = document.getElementById('login-erro');
+  erroEl.textContent = '';
+  if (!email || !senha) { erroEl.textContent = 'Preencha e-mail e senha.'; return; }
+  try {
+    await firebase.auth().signInWithEmailAndPassword(email, senha);
+  } catch (err) {
+    const msgs = {
+      'auth/user-not-found':   'Usuário não encontrado.',
+      'auth/wrong-password':   'Senha incorreta.',
+      'auth/invalid-email':    'E-mail inválido.',
+      'auth/invalid-credential': 'E-mail ou senha incorretos.',
+      'auth/too-many-requests':'Muitas tentativas. Tente mais tarde.',
+    };
+    erroEl.textContent = msgs[err.code] || 'Erro ao fazer login. Tente novamente.';
+  }
+}
+
+async function fazerLogout() {
+  if (!confirm('Deseja sair do sistema?')) return;
+  await firebase.auth().signOut();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  firebase.auth().onAuthStateChanged(async user => {
+    if (user) {
+      // Usuário logado — esconde login, mostra app
+      document.getElementById('login-overlay').style.display = 'none';
+      document.getElementById('sidebar-user-info').style.display = 'flex';
+      document.getElementById('sidebar-user-email').textContent = user.email;
+      // Carrega dados iniciais
+      const count = await db.equipamentos.count();
+      if (count > 0) loadDashboard();
+      await loadImportStatus();
+    } else {
+      // Não logado — exibe tela de login, oculta app
+      document.getElementById('login-overlay').style.display = 'flex';
+      document.getElementById('sidebar-user-info').style.display = 'none';
+    }
+  });
+});
+</script>
+</body>
+</html>
