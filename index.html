@@ -175,6 +175,11 @@ tbody tr:last-child td { border-bottom: none; }
 .detail-tab.active { color:#0f3460; border-bottom-color:#0f3460; }
 .detail-panel { display:none; }
 .detail-panel.active { display:block; }
+th.sortable { cursor:pointer; user-select:none; white-space:nowrap; }
+th.sortable:hover { background:#e2e8f0; }
+th.sortable.asc::after  { content:' ▲'; font-size:10px; color:#0f3460; }
+th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
+.tab-alerta { color:#f59e0b; font-size:12px; margin-left:3px; }
 /* LOGIN */
 #login-overlay {
   position:fixed; inset:0; background:#0f3460; z-index:9999;
@@ -419,14 +424,22 @@ tbody tr:last-child td { border-bottom: none; }
       <div id="modal-cli-detalhe-body">
         <div id="detalhe-cli-info" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"></div>
         <div class="detail-tabs">
-          <div class="detail-tab active" onclick="showClienteTab('contratos')">📋 Contratos</div>
-          <div class="detail-tab" onclick="showClienteTab('equipamentos')">🔧 Equipamentos</div>
-          <div class="detail-tab" onclick="showClienteTab('vendas')">💰 Vendas</div>
-          <div class="detail-tab" onclick="showClienteTab('consumo')">📦 Consumo</div>
+          <div class="detail-tab active" onclick="showClienteTab('vendas')" id="cli-tab-vendas">💰 Vendas</div>
+          <div class="detail-tab" onclick="showClienteTab('contratos')" id="cli-tab-contratos">📋 Contratos</div>
+          <div class="detail-tab" onclick="showClienteTab('equipamentos')" id="cli-tab-equipamentos">🔧 Equipamentos</div>
+          <div class="detail-tab" onclick="showClienteTab('consumo')" id="cli-tab-consumo">📦 Consumo</div>
         </div>
-        <div id="cli-panel-contratos" class="detail-panel active">
+        <div id="cli-panel-contratos" class="detail-panel">
           <div class="table-scroll"><table>
-            <thead><tr><th>Contrato</th><th>Situação</th><th>Val. Contrato</th><th>Equipamentos</th><th>Ativos</th><th>Prox. Calibração</th><th>Prox. Treinamento</th></tr></thead>
+            <thead><tr id="cli-thead-contratos">
+              <th class="sortable" onclick="sortCliContratos('contrato')">Contrato</th>
+              <th class="sortable" onclick="sortCliContratos('situacao')">Situação</th>
+              <th class="sortable" onclick="sortCliContratos('validade')">Val. Contrato</th>
+              <th class="sortable" onclick="sortCliContratos('total')">Equipamentos</th>
+              <th class="sortable" onclick="sortCliContratos('ativos')">Ativos</th>
+              <th class="sortable" onclick="sortCliContratos('calib')">Prox. Calibração</th>
+              <th class="sortable" onclick="sortCliContratos('trein')">Prox. Treinamento</th>
+            </tr></thead>
             <tbody id="cli-tbody-contratos"></tbody>
           </table></div>
         </div>
@@ -1168,38 +1181,41 @@ async function abrirDetalheCliente(cnpj) {
     { label: 'E-mail',              value: cadastrado?.email },
     { label: 'Nome do Contato',     value: cadastrado?.nomeContato },
     { label: 'Observação',          value: cadastrado?.observacao },
-  ].filter(f => f.value);
-  document.getElementById('detalhe-cli-info').innerHTML = infoFields.length
-    ? infoFields.map(f => `
-        <div>
-          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">${f.label}</div>
-          <div style="font-size:13px;color:#1e293b;font-weight:500">${f.value}</div>
-        </div>`).join('')
-    : '<div style="color:#94a3b8;font-size:13px;grid-column:1/-1">Nenhuma informação cadastrada. Clique em ✏️ Editar para preencher.</div>';
+  ];
+  document.getElementById('detalhe-cli-info').innerHTML = infoFields.map(f => `
+    <div>
+      <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">${f.label}</div>
+      <div style="font-size:13px;color:${f.value ? '#1e293b' : '#cbd5e1'};font-weight:500">${f.value || '—'}</div>
+    </div>`).join('');
 
-  const grupos = new Map();
+  // Alertas nas abas
+  const alertaContratos    = equips.some(isVencidoVigente);
+  const alertaEquipamentos = equips.some(e => isVencido(e.vencCalib) || isVencido(e.vencTrein));
+  const alertaConsumo      = consumoAll.some(c => c.classificacao === 'VERIFIQUE CONSUMO');
+  document.getElementById('cli-tab-contratos').innerHTML    = `📋 Contratos${alertaContratos ? '<span class="tab-alerta">⚠️</span>' : ''}`;
+  document.getElementById('cli-tab-equipamentos').innerHTML = `🔧 Equipamentos${alertaEquipamentos ? '<span class="tab-alerta">⚠️</span>' : ''}`;
+  document.getElementById('cli-tab-consumo').innerHTML      = `📦 Consumo${alertaConsumo ? '<span class="tab-alerta">⚠️</span>' : ''}`;
+
+  // Montar grupos para ordenação
+  const gruposMap = new Map();
   equips.forEach(e => {
     const key = e.contrato || '(sem contrato)';
-    if (!grupos.has(key)) grupos.set(key, []);
-    grupos.get(key).push(e);
+    if (!gruposMap.has(key)) gruposMap.set(key, []);
+    gruposMap.get(key).push(e);
   });
-  document.getElementById('cli-tbody-contratos').innerHTML = grupos.size === 0
-    ? '<tr><td colspan="7" class="no-data"><p>Nenhum contrato</p></td></tr>'
-    : [...grupos.entries()].map(([key, eqs]) => {
-        const ativos = eqs.filter(e => e.statusEquip === 'ATIVO').length;
-        const calibDates = eqs.map(e => e.vencCalib).filter(Boolean).sort();
-        const treinDates = eqs.map(e => e.vencTrein).filter(Boolean).sort();
-        const alerta = eqs.some(isVencidoVigente);
-        return `<tr>
-          <td style="font-size:12px;white-space:nowrap">${alerta ? '⚠️ ' : ''}<strong>${key}</strong></td>
-          <td>${statusBadge(eqs[0].situacaoContrato)}</td>
-          <td>${vencBadge(eqs[0].validadeContrato)}</td>
-          <td style="text-align:center"><span class="badge badge-blue">${eqs.length}</span></td>
-          <td style="text-align:center"><span class="badge ${ativos > 0 ? 'badge-green' : 'badge-gray'}">${ativos}</span></td>
-          <td>${vencBadge(calibDates[0] || null)}</td>
-          <td>${vencBadge(treinDates[0] || null)}</td>
-        </tr>`;
-      }).join('');
+  cliGruposData = [...gruposMap.entries()].map(([key, eqs]) => ({
+    contrato:  key,
+    situacao:  eqs[0].situacaoContrato || '',
+    validade:  eqs[0].validadeContrato || '',
+    total:     eqs.length,
+    ativos:    eqs.filter(e => e.statusEquip === 'ATIVO').length,
+    calib:     eqs.map(e => e.vencCalib).filter(Boolean).sort()[0] || '',
+    trein:     eqs.map(e => e.vencTrein).filter(Boolean).sort()[0] || '',
+    alerta:    eqs.some(isVencidoVigente),
+    _eqs:      eqs,
+  }));
+  cliSortCol = null; cliSortDir = 1;
+  renderCliContratos();
 
   document.getElementById('cli-tbody-equipamentos').innerHTML = equips.length === 0
     ? '<tr><td colspan="6" class="no-data"><p>Nenhum equipamento</p></td></tr>'
@@ -1244,7 +1260,7 @@ async function abrirDetalheCliente(cnpj) {
         </tr>`;
       }).join('');
 
-  showClienteTab('contratos');
+  showClienteTab('vendas');
   document.getElementById('modal-cli-detalhe-overlay').classList.add('open');
 }
 
@@ -1255,13 +1271,50 @@ function fecharDetalheCliente(e) {
   clienteAtualCnpj = null;
 }
 
-function showClienteTab(tab) {
-  document.querySelectorAll('.detail-tab').forEach((t, i) => {
-    const tabs = ['contratos', 'equipamentos', 'vendas', 'consumo'];
-    t.classList.toggle('active', tabs[i] === tab);
+let cliGruposData = [];
+let cliSortCol = null;
+let cliSortDir = 1; // 1 = crescente, -1 = decrescente
+
+function sortCliContratos(col) {
+  if (cliSortCol === col) cliSortDir *= -1;
+  else { cliSortCol = col; cliSortDir = 1; }
+  renderCliContratos();
+}
+
+function renderCliContratos() {
+  // Atualizar indicadores visuais no thead
+  document.querySelectorAll('#cli-thead-contratos th.sortable').forEach(th => {
+    th.classList.remove('asc','desc');
+    const c = th.getAttribute('onclick').match(/sortCliContratos\('(\w+)'\)/)?.[1];
+    if (c === cliSortCol) th.classList.add(cliSortDir === 1 ? 'asc' : 'desc');
   });
-  ['contratos', 'equipamentos', 'vendas', 'consumo'].forEach(t => {
-    document.getElementById('cli-panel-' + t).classList.toggle('active', t === tab);
+
+  const dados = [...cliGruposData];
+  if (cliSortCol) {
+    dados.sort((a, b) => {
+      let va = a[cliSortCol], vb = b[cliSortCol];
+      if (typeof va === 'number') return (va - vb) * cliSortDir;
+      return (va || '').localeCompare(vb || '') * cliSortDir;
+    });
+  }
+
+  document.getElementById('cli-tbody-contratos').innerHTML = dados.length === 0
+    ? '<tr><td colspan="7" class="no-data"><p>Nenhum contrato</p></td></tr>'
+    : dados.map(g => `<tr>
+        <td style="font-size:12px;white-space:nowrap">${g.alerta ? '⚠️ ' : ''}<strong>${g.contrato}</strong></td>
+        <td>${statusBadge(g.situacao)}</td>
+        <td>${vencBadge(g.validade)}</td>
+        <td style="text-align:center"><span class="badge badge-blue">${g.total}</span></td>
+        <td style="text-align:center"><span class="badge ${g.ativos > 0 ? 'badge-green' : 'badge-gray'}">${g.ativos}</span></td>
+        <td>${vencBadge(g.calib)}</td>
+        <td>${vencBadge(g.trein)}</td>
+      </tr>`).join('');
+}
+
+function showClienteTab(tab) {
+  ['vendas','contratos','equipamentos','consumo'].forEach(t => {
+    document.getElementById('cli-tab-' + t)?.classList.toggle('active', t === tab);
+    document.getElementById('cli-panel-' + t)?.classList.toggle('active', t === tab);
   });
 }
 
