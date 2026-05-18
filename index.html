@@ -1263,17 +1263,26 @@ async function loadDashboard() {
   document.getElementById('dash-data-ref').textContent = `Atualizado em ${hoje.toLocaleDateString('pt-BR')}`;
 
   // ── Hero Vendas ──────────────────────────────────────────
-  const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
-  const nomeMes = hoje.toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
   const META_MES = 50000;
 
-  const vendasMes = vendas.filter(v => v.fechamento?.startsWith(mesAtual));
+  // Usa o mês atual; se não tiver dados, cai para o mais recente com vendas
+  const mesAtualKey = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  const mesesComVendas = [...new Set(vendas.map(v => v.fechamento?.substring(0,7)).filter(Boolean))].sort();
+  const mesRef = mesesComVendas.includes(mesAtualKey)
+    ? mesAtualKey
+    : (mesesComVendas[mesesComVendas.length - 1] || mesAtualKey);
+
+  const mesRefDate = new Date(mesRef + '-01T00:00:00');
+  const nomeMes = mesRefDate.toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+  const isMesAtual = mesRef === mesAtualKey;
+
+  const vendasMes = vendas.filter(v => v.fechamento?.startsWith(mesRef));
   const fatMes    = vendasMes.reduce((s, v) => s + (Number(v.valorVenda) || 0), 0);
   const pedidosMes = vendasMes.length;
   const ticketMedio = pedidosMes > 0 ? fatMes / pedidosMes : 0;
 
-  const anoAtual = String(hoje.getFullYear());
-  const fatAno = vendas.filter(v => v.fechamento?.startsWith(anoAtual))
+  const anoRef = mesRef.substring(0, 4);
+  const fatAno = vendas.filter(v => v.fechamento?.startsWith(anoRef))
                        .reduce((s, v) => s + (Number(v.valorVenda) || 0), 0);
 
   const perc = Math.min(Math.round((fatMes / META_MES) * 100), 100);
@@ -1282,7 +1291,8 @@ async function loadDashboard() {
   const fillColor  = percReal >= 100 ? '#34d399' : percReal >= 60 ? '#fbbf24' : '#f87171';
 
   const mesLabel = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
-  document.getElementById('hero-mes-label').textContent     = `Faturamento — ${mesLabel}`;
+  const sufixo = isMesAtual ? '' : ' ↩ último mês com dados';
+  document.getElementById('hero-mes-label').textContent      = `Faturamento — ${mesLabel}${sufixo}`;
   document.getElementById('hero-meta-mes-label').textContent = `Meta — ${mesLabel}`;
   document.getElementById('hero-fat-valor').textContent     = fmtMoeda(fatMes);
   document.getElementById('hero-meta-valor').textContent    = fmtMoeda(META_MES);
