@@ -305,6 +305,107 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
   text-align:left; width:100%;
 }
 .btn-logout:hover { background:rgba(233,69,96,0.3); }
+
+/* ── MOBILE TOPBAR ──────────────────────────────────── */
+#mobile-topbar {
+  display:none;
+  position:fixed; top:0; left:0; right:0; height:56px; z-index:200;
+  background:#0f3460; align-items:center; justify-content:space-between; padding:0 16px;
+}
+#btn-menu {
+  background:none; border:none; color:white; font-size:24px;
+  cursor:pointer; padding:6px; line-height:1; border-radius:6px;
+}
+#btn-menu:hover { background:rgba(255,255,255,0.1); }
+#sidebar-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:99;
+}
+
+/* ── RESPONSIVO ─────────────────────────────────────── */
+@media (max-width:768px) {
+  #mobile-topbar  { display:flex; }
+  #sidebar-overlay { /* controlled by JS */ }
+
+  /* Sidebar vira gaveta */
+  #sidebar {
+    transform:translateX(-220px);
+    transition:transform 0.28s cubic-bezier(.4,0,.2,1);
+    z-index:100;
+  }
+  body.sidebar-open #sidebar        { transform:translateX(0); }
+  body.sidebar-open #sidebar-overlay { display:block; }
+
+  /* Main sem margem lateral, com espaço para topbar */
+  #main { margin-left:0 !important; padding:16px; padding-top:72px; }
+
+  /* Hero vendas empilhado */
+  .vendas-hero { grid-template-columns:1fr; }
+  .hero-card, .hero-meta-card { padding:20px; }
+  .hero-value, .hero-meta-value { font-size:28px; }
+  .hero-stats { gap:12px; flex-wrap:wrap; }
+
+  /* Cards */
+  .cards { grid-template-columns:1fr 1fr; gap:12px; }
+
+  /* Charts */
+  .charts-grid { grid-template-columns:1fr; }
+
+  /* Tabelas */
+  .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table { font-size:12px; }
+  thead th, tbody td { padding:8px 10px; white-space:nowrap; }
+  .td-ellipsis { max-width:120px; }
+
+  /* Toolbar de filtros */
+  .table-toolbar { flex-wrap:wrap; }
+  .table-toolbar input[type=text] { min-width:100%; order:-1; }
+  .table-count { margin-left:0; }
+
+  /* Page header */
+  .page-header { flex-direction:column; gap:10px; align-items:flex-start; }
+  .page-header > .btn, .page-header > button { width:100%; text-align:center; justify-content:center; }
+
+  /* Formulários */
+  .form-grid           { grid-template-columns:1fr !important; }
+  .form-grid.cols3     { grid-template-columns:1fr !important; }
+
+  /* Modal geral */
+  #modal-box { width:95vw; margin:0 auto; }
+  #modal-body { padding:16px; }
+  #modal-footer { padding:12px 16px; }
+
+  /* Modal detalhe cliente */
+  #modal-cli-detalhe-overlay { padding:8px; }
+  #modal-cli-detalhe-box     { border-radius:12px; }
+  #modal-cli-detalhe-header  { padding:14px 16px; }
+  #modal-cli-detalhe-body    { padding:12px 16px; }
+
+  /* Tabs */
+  .detail-tabs { overflow-x:auto; flex-wrap:nowrap; padding-bottom:2px; }
+  .detail-tab  { white-space:nowrap; font-size:12px; padding:10px 12px; }
+
+  /* Detalhe equip */
+  .detalhe-grid { grid-template-columns:1fr 1fr; }
+
+  /* Drop zone importação */
+  #drop-zone { padding:32px 16px; }
+  #drop-zone .drop-icon { font-size:40px; }
+
+  /* Radar Cidades */
+  .rc-layout {
+    grid-template-columns:1fr;
+    height:auto;
+  }
+  #rc-map { height:60vw; min-height:260px; max-height:380px; }
+  .rc-painel { border-left:none; border-top:1px solid #e2e8f0; max-height:300px; }
+}
+
+@media (max-width:480px) {
+  .cards { grid-template-columns:1fr; }
+  .hero-stats { justify-content:space-around; }
+  .card .card-value { font-size:22px; }
+}
+
 /* ── Radar Cidades ──────────────────────────────────── */
 .rc-layout {
   display:grid; grid-template-columns:1fr 320px; gap:0;
@@ -379,6 +480,14 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
 </style>
 </head>
 <body>
+
+<!-- TOPBAR MOBILE -->
+<div id="mobile-topbar">
+  <button id="btn-menu" onclick="toggleSidebar()">☰</button>
+  <img src="logo.png" alt="Hominum" style="height:26px;filter:brightness(0) invert(1)">
+  <div style="width:40px"></div>
+</div>
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
 <!-- TELA DE CARREGAMENTO -->
 <div id="loading-overlay">
@@ -1242,8 +1351,13 @@ const db = {
 // ============================================================
 // NAVIGATION
 // ============================================================
+function toggleSidebar() {
+  document.body.classList.toggle('sidebar-open');
+}
+
 function showPage(name) {
   localStorage.setItem('paginaAtual', name);
+  document.body.classList.remove('sidebar-open'); // fecha menu no mobile
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   // Limpa active de links e sub-itens
   document.querySelectorAll('#sidebar nav a[data-page], #sidebar .nav-sub-item[data-page]').forEach(a => a.classList.remove('active'));
