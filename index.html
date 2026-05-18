@@ -142,27 +142,7 @@ tbody tr:last-child td { border-bottom: none; }
 /* Modal */
 #modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center; }
 #modal-overlay.open { display:flex; }
-/* Modal detalhe cliente */
-#modal-cli-detalhe-overlay {
-  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
-  z-index:998; align-items:flex-start; justify-content:center; padding:24px 16px; overflow-y:auto;
-}
-#modal-cli-detalhe-overlay.open { display:flex; }
-#modal-cli-detalhe-box {
-  background:white; border-radius:16px; width:100%; max-width:900px;
-  box-shadow:0 20px 60px rgba(0,0,0,0.3); display:flex; flex-direction:column;
-  margin:auto;
-}
-#modal-cli-detalhe-header {
-  padding:20px 24px 16px; border-bottom:1px solid #e2e8f0;
-  display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
-}
-#modal-cli-detalhe-body { padding:20px 24px; }
-#modal-cli-detalhe-header button.fechar {
-  background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;
-  line-height:1; padding:2px 6px; border-radius:6px; flex-shrink:0;
-}
-#modal-cli-detalhe-header button.fechar:hover { background:#f1f5f9; color:#475569; }
+/* Ficha dedicada do cliente — estilos herdados do layout geral */
 #modal-box {
   background:white; border-radius:16px; width:760px; max-width:95vw;
   max-height:92vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.25);
@@ -374,11 +354,9 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
   #modal-body { padding:16px; }
   #modal-footer { padding:12px 16px; }
 
-  /* Modal detalhe cliente */
-  #modal-cli-detalhe-overlay { padding:8px; }
-  #modal-cli-detalhe-box     { border-radius:12px; }
-  #modal-cli-detalhe-header  { padding:14px 16px; }
-  #modal-cli-detalhe-body    { padding:12px 16px; }
+  /* Ficha cliente em mobile */
+  #page-cliente-detalhe .page-header { gap:8px; }
+  #detalhe-cli-nome { font-size:17px !important; }
 
   /* Tabs */
   .detail-tabs { overflow-x:auto; flex-wrap:nowrap; padding-bottom:2px; }
@@ -831,29 +809,34 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
     </div>
   </div>
 
-  <!-- MODAL DETALHE CLIENTE -->
-  <div id="modal-cli-detalhe-overlay" onclick="fecharDetalheCliente(event)">
-    <div id="modal-cli-detalhe-box">
-      <div id="modal-cli-detalhe-header">
-        <div>
-          <h3 id="detalhe-cli-nome" style="color:#0f3460;font-size:18px;font-weight:700"></h3>
+  <!-- FICHA DO CLIENTE — PÁGINA DEDICADA -->
+  <div id="page-cliente-detalhe" class="page">
+    <div class="page-header" style="align-items:flex-start;gap:16px">
+      <div style="display:flex;gap:14px;align-items:flex-start;flex:1;min-width:0">
+        <button class="btn btn-ghost" onclick="voltarParaClientes()" style="white-space:nowrap;margin-top:4px">← Voltar</button>
+        <div style="min-width:0">
+          <h1 id="detalhe-cli-nome" style="font-size:22px;font-weight:800;color:#0f3460;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></h1>
           <p id="detalhe-cli-sub" style="color:#64748b;font-size:13px;margin-top:4px"></p>
           <div id="detalhe-cli-status-row" style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <button class="btn-ghost" onclick="editarClienteAtual()">✏️ Editar</button>
-          <button class="fechar" onclick="fecharDetalheCliente()">✕</button>
-        </div>
       </div>
-      <div id="modal-cli-detalhe-body">
-        <div id="detalhe-cli-info" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"></div>
-        <div class="detail-tabs">
-          <div class="detail-tab active" onclick="showClienteTab('vendas')" id="cli-tab-vendas">💰 Vendas</div>
-          <div class="detail-tab" onclick="showClienteTab('crm')" id="cli-tab-crm">🎯 CRM</div>
-          <div class="detail-tab" onclick="showClienteTab('contratos')" id="cli-tab-contratos">📋 Contratos</div>
-          <div class="detail-tab" onclick="showClienteTab('equipamentos')" id="cli-tab-equipamentos">🔧 Equipamentos</div>
-          <div class="detail-tab" onclick="showClienteTab('consumo')" id="cli-tab-consumo">📦 Consumo</div>
-        </div>
+      <button class="btn btn-ghost" onclick="editarClienteAtual()" style="flex-shrink:0">✏️ Editar</button>
+    </div>
+
+    <!-- Info card -->
+    <div style="background:white;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-bottom:16px">
+      <div id="detalhe-cli-info" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px"></div>
+    </div>
+
+    <!-- Abas e painéis -->
+    <div style="background:white;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
+      <div class="detail-tabs">
+        <div class="detail-tab active" onclick="showClienteTab('vendas')" id="cli-tab-vendas">💰 Vendas</div>
+        <div class="detail-tab" onclick="showClienteTab('crm')" id="cli-tab-crm">🎯 CRM</div>
+        <div class="detail-tab" onclick="showClienteTab('contratos')" id="cli-tab-contratos">📋 Contratos</div>
+        <div class="detail-tab" onclick="showClienteTab('equipamentos')" id="cli-tab-equipamentos">🔧 Equipamentos</div>
+        <div class="detail-tab" onclick="showClienteTab('consumo')" id="cli-tab-consumo">📦 Consumo</div>
+      </div>
         <div id="cli-panel-contratos" class="detail-panel">
           <div class="table-scroll"><table>
             <thead><tr id="cli-thead-contratos">
@@ -984,10 +967,9 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
               <div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">Nenhuma oportunidade cadastrada</div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
+        </div><!-- fim cli-panel-crm -->
+      </div><!-- fim painel abas -->
+  </div><!-- fim page-cliente-detalhe -->
 
   <!-- MODAL CADASTRO/EDIÇÃO -->
   <div id="modal-overlay" onclick="fecharFormEquip(event)">
@@ -1557,6 +1539,15 @@ function showPage(name) {
   if (name === 'importar') loadImportStatus();
   if (name === 'insumos')  renderInsumos();
   if (name === 'radar-cidades') rcInit();
+  if (name === 'cliente-detalhe' && !clienteAtualCnpj) {
+    // Refresh sem cliente carregado → volta para lista
+    localStorage.setItem('paginaAtual', 'clientes');
+    document.getElementById('page-cliente-detalhe').classList.remove('active');
+    document.getElementById('page-clientes').classList.add('active');
+    const link = document.querySelector('#sidebar [data-page="clientes"]');
+    if (link) link.classList.add('active');
+    paginaClientes = 0; renderClientes();
+  }
 }
 
 function toggleNavConfig() {
@@ -2029,12 +2020,17 @@ async function abrirDetalheCliente(cnpj) {
       }).join('');
 
   showClienteTab('vendas');
-  document.getElementById('modal-cli-detalhe-overlay').classList.add('open');
+  showPage('cliente-detalhe');
+}
+
+function voltarParaClientes() {
+  clienteAtualId  = null;
+  clienteAtualCnpj = null;
+  showPage('clientes');
 }
 
 function fecharDetalheCliente(e) {
-  if (e && e.target !== document.getElementById('modal-cli-detalhe-overlay')) return;
-  document.getElementById('modal-cli-detalhe-overlay').classList.remove('open');
+  voltarParaClientes();
   clienteAtualId = null;
   clienteAtualCnpj = null;
 }
@@ -2163,8 +2159,9 @@ async function excluirCliente() {
   if (!confirm('Excluir este cliente do cadastro? Os equipamentos e contratos associados não serão apagados.')) return;
   await db.clientes.delete(idVal);
   document.getElementById('modal-cliente-overlay').style.display = 'none';
-  document.getElementById('modal-cli-detalhe-overlay').classList.remove('open');
   clienteAtualId = null;
+  clienteAtualCnpj = null;
+  showPage('clientes');
   renderClientes();
 }
 
