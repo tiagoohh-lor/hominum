@@ -700,6 +700,36 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
       </div>
       <button class="btn btn-primary" onclick="abrirFormCliente()">+ Novo Cliente</button>
     </div>
+
+    <!-- Mini-dashboard -->
+    <div class="cards" style="margin-bottom:16px">
+      <div class="card blue" style="cursor:pointer" onclick="filtrarCliDash(null)" id="cd-card-total">
+        <div class="card-label">Total Cadastrados</div>
+        <div class="card-value" id="cd-total">—</div>
+        <div class="card-sub">todos os clientes</div>
+      </div>
+      <div class="card green" style="cursor:pointer" onclick="filtrarCliDash('ativos')" id="cd-card-ativos">
+        <div class="card-label">Clientes Ativos</div>
+        <div class="card-value" id="cd-ativos">—</div>
+        <div class="card-sub">com equipamento ativo</div>
+      </div>
+      <div class="card orange" style="cursor:pointer" onclick="filtrarCliDash('alerta')" id="cd-card-alerta">
+        <div class="card-label">⚠️ Com Alerta</div>
+        <div class="card-value" id="cd-alerta">—</div>
+        <div class="card-sub">calibração ou treinamento</div>
+      </div>
+      <div class="card red" style="cursor:pointer" onclick="filtrarCliDash('risco')" id="cd-card-risco">
+        <div class="card-label">🔴 Em Risco</div>
+        <div class="card-value" id="cd-risco">—</div>
+        <div class="card-sub">status CRM = Em Risco</div>
+      </div>
+      <div class="card purple" style="cursor:pointer" onclick="filtrarCliDash('pendente')" id="cd-card-pendente">
+        <div class="card-label">📋 Contratos Pendentes</div>
+        <div class="card-value" id="cd-pendente">—</div>
+        <div class="card-sub">vencidos ainda como Vigente</div>
+      </div>
+    </div>
+
     <div class="table-box">
       <div class="table-toolbar">
         <input type="text" id="cli-busca" placeholder="🔍  Razão social, CNPJ, cidade..." oninput="renderClientes()">
@@ -1531,7 +1561,7 @@ function showPage(name) {
     }
   }
   if (name === 'dashboard') loadDashboard();
-  if (name === 'clientes') { paginaClientes = 0; renderClientes(); }
+  if (name === 'clientes') { cliDashFiltro = null; paginaClientes = 0; renderClientes(); }
   if (name === 'contratos') { paginaContratos = 0; dadosContratosFiltrado = null; renderContratos(); }
   if (name === 'rastreabilidade') { paginaRast = 0; dadosRastFiltrado = null; renderRastreabilidade(); }
   if (name === 'vendas') { paginaVendas = 0; dadosVendasFiltrado = null; renderVendas(); }
@@ -1796,6 +1826,14 @@ let paginaClientes = 0;
 let clienteAtualCnpj = null;
 let clienteAtualId = null;
 
+let cliDashFiltro = null;
+
+function filtrarCliDash(tipo) {
+  cliDashFiltro = tipo;
+  paginaClientes = 0;
+  renderClientes();
+}
+
 async function renderClientes(pag) {
   if (pag !== undefined) paginaClientes = pag;
   const busca = document.getElementById('cli-busca').value.toLowerCase();
@@ -1832,12 +1870,41 @@ async function renderClientes(pag) {
     vendasMap[v.cnpj] = (vendasMap[v.cnpj] || 0) + 1;
   });
 
+  // Builds de CNPJs com alerta e contratos pendentes
+  const cnpjsAlerta   = new Set();
+  const cnpjsPendente = new Set();
+  equips.forEach(e => {
+    if (!e.cnpj) return;
+    if (isVencido(e.vencCalib) || isVencido(e.vencTrein)) cnpjsAlerta.add(e.cnpj);
+    if (isVencidoVigente(e)) cnpjsPendente.add(e.cnpj);
+  });
+
   let lista = [...mapaClientes.values()].map(c => ({
     ...c,
     nContratos: contratosMap[c.cnpj] ? contratosMap[c.cnpj].size : 0,
     nAtivos: ativosMap[c.cnpj] || 0,
     nVendas: vendasMap[c.cnpj] || 0,
+    temAlerta:   cnpjsAlerta.has(c.cnpj),
+    temPendente: cnpjsPendente.has(c.cnpj),
   })).sort((a, b) => (a.razaoSocial || '').localeCompare(b.razaoSocial || ''));
+
+  // Calcula métricas para os cards
+  const nTotal    = lista.length;
+  const nAtivos   = lista.filter(c => c.nAtivos > 0).length;
+  const nAlerta   = lista.filter(c => c.temAlerta).length;
+  const nRisco    = lista.filter(c => c.statusRelacionamento === 'Em Risco').length;
+  const nPendente = lista.filter(c => c.temPendente).length;
+  document.getElementById('cd-total').textContent    = nTotal;
+  document.getElementById('cd-ativos').textContent   = nAtivos;
+  document.getElementById('cd-alerta').textContent   = nAlerta;
+  document.getElementById('cd-risco').textContent    = nRisco;
+  document.getElementById('cd-pendente').textContent = nPendente;
+
+  // Destaque visual no card ativo
+  ['total','ativos','alerta','risco','pendente'].forEach(k => {
+    const card = document.getElementById('cd-card-' + k);
+    if (card) card.style.outline = (cliDashFiltro === (k === 'total' ? null : k)) ? '3px solid #0f3460' : 'none';
+  });
 
   if (document.getElementById('cli-uf').options.length <= 1) {
     const ufs = [...new Set(lista.map(c => c.siglaEstado).filter(Boolean))].sort();
@@ -1848,7 +1915,11 @@ async function renderClientes(pag) {
   let filtrado = lista.filter(c => {
     const ok1 = !busca || [c.razaoSocial, c.cnpj, c.cidade, c.regiao].some(v => (v||'').toLowerCase().includes(busca));
     const ok2 = !uf || c.siglaEstado === uf;
-    return ok1 && ok2;
+    const ok3 = cliDashFiltro === 'ativos'   ? c.nAtivos > 0 :
+                cliDashFiltro === 'alerta'   ? c.temAlerta :
+                cliDashFiltro === 'risco'    ? c.statusRelacionamento === 'Em Risco' :
+                cliDashFiltro === 'pendente' ? c.temPendente : true;
+    return ok1 && ok2 && ok3;
   });
 
   document.getElementById('count-clientes').textContent = `${filtrado.length.toLocaleString('pt-BR')} clientes`;
