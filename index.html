@@ -3042,8 +3042,8 @@ async function rcInit() {
 
   // Carrega dados apenas uma vez
   if (!rcCarregado) {
-    rcCarregado = true;
     await rcCarregarDados();
+    rcCarregado = true;
   }
 }
 
@@ -3053,15 +3053,21 @@ async function rcCarregarDados() {
     db.equipamentos.toArray(),
   ]);
 
+  // Começa pelos equipamentos (sempre têm cidade), depois mescla com cadastro de clientes
   const cnpjMap = new Map();
-  clientes.forEach(c => { if (c.cnpj) cnpjMap.set(c.cnpj, c); });
   equips.forEach(e => {
-    if (e.cnpj && !cnpjMap.has(e.cnpj)) {
+    if (!e.cnpj) return;
+    if (!cnpjMap.has(e.cnpj)) {
       cnpjMap.set(e.cnpj, {
         cnpj: e.cnpj, razaoSocial: e.cliente || e.cnpj,
-        cidade: e.cidade, siglaEstado: e.siglaEstado,
+        cidade: e.cidade, siglaEstado: e.siglaEstado, regiao: e.regiao,
       });
     }
+  });
+  clientes.forEach(c => {
+    if (!c.cnpj) return;
+    const base = cnpjMap.get(c.cnpj) || {};
+    cnpjMap.set(c.cnpj, { ...base, ...c });
   });
 
   rcCidadesMap.clear();
