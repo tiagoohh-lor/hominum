@@ -1017,59 +1017,68 @@ firebase.initializeApp(firebaseConfig);
 // DATABASE — Abstração Firestore (API compatível com Dexie)
 // ============================================================
 class FSQuery {
-  constructor(colRef) { this._q = colRef; this._field = null; }
-  equals(value)      { this._q = this._q.where(this._field, '==', value); return this; }
-  above(value)       { this._q = this._q.where(this._field, '>',  value); return this; }
-  below(value)       { this._q = this._q.where(this._field, '<',  value); return this; }
-  orderBy(f, d='asc'){ this._q = this._q.orderBy(f, d); return this; }
-  limit(n)           { this._q = this._q.limit(n); return this; }
-  async toArray() {
-    const s = await this._q.get();
-    return s.docs.map(d => ({ id: d.id, ...d.data() }));
+  constructor(col) { this._col = col; this._field = null; this._filters = []; }
+  equals(value) { this._filters.push({ field: this._field, op: '==', value }); return this; }
+  above(value)  { this._filters.push({ field: this._field, op: '>',  value }); return this; }
+  below(value)  { this._filters.push({ field: this._field, op: '<',  value }); return this; }
+  orderBy()     { return this; } // handled in-memory
+  limit()       { return this; }
+  async _run() {
+    const all = await this._col.toArray();
+    return this._filters.reduce((arr, f) => arr.filter(item => {
+      if (f.op === '==') return item[f.field] === f.value;
+      if (f.op === '>')  return item[f.field] >  f.value;
+      if (f.op === '<')  return item[f.field] <  f.value;
+      return true;
+    }), all);
   }
-  async first() {
-    const s = await this._q.limit(1).get();
-    if (s.empty) return undefined;
-    const d = s.docs[0];
-    return { id: d.id, ...d.data() };
-  }
-  async count() { const s = await this._q.get(); return s.size; }
+  async toArray() { return this._run(); }
+  async first()   { return (await this._run())[0]; }
+  async count()   { return (await this._run()).length; }
 }
 
 class FSCollection {
-  constructor(name) { this._name = name; }
-  _ref() { return firebase.firestore().collection(this._name); }
-
-  async count() { return (await this._ref().get()).size; }
+  constructor(name) { this._name = name; this._cache = null; }
+  _ref()       { return firebase.firestore().collection(this._name); }
+  _bust()      { this._cache = null; }
 
   async toArray() {
-    const s = await this._ref().get();
-    return s.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!this._cache) {
+      const s = await this._ref().get();
+      this._cache = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    return this._cache;
   }
 
+  async count() { return (await this.toArray()).length; }
+
   async get(id) {
-    const d = await this._ref().doc(String(id)).get();
-    return d.exists ? { id: d.id, ...d.data() } : undefined;
+    const all = await this.toArray();
+    return all.find(d => d.id === String(id));
   }
 
   async add(data) {
     const ref = await this._ref().add(data);
+    this._bust();
     return ref.id;
   }
 
   async update(id, data) {
     await this._ref().doc(String(id)).update(data);
+    this._bust();
   }
 
   async put(data) {
     const { id, ...rest } = data;
-    if (id) { await this._ref().doc(String(id)).set(rest, { merge: true }); return id; }
+    if (id) { await this._ref().doc(String(id)).set(rest, { merge: true }); this._bust(); return id; }
     const ref = await this._ref().add(rest);
+    this._bust();
     return ref.id;
   }
 
   async delete(id) {
     await this._ref().doc(String(id)).delete();
+    this._bust();
   }
 
   async clear() {
@@ -1079,6 +1088,7 @@ class FSCollection {
       s.docs.slice(i, i + 400).forEach(d => b.delete(d.ref));
       await b.commit();
     }
+    this._bust();
   }
 
   async bulkAdd(items) {
@@ -1088,10 +1098,11 @@ class FSCollection {
       items.slice(i, i + 400).forEach(item => b.set(this._ref().doc(), item));
       await b.commit();
     }
+    this._bust();
   }
 
   where(field) {
-    const q = new FSQuery(this._ref());
+    const q = new FSQuery(this);
     q._field = field;
     return q;
   }
@@ -2876,6 +2887,14 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('login-overlay').style.display = 'none';
       document.getElementById('sidebar-user-info').style.display = 'flex';
       document.getElementById('sidebar-user-email').textContent = user.email;
+      // Pré-carrega todos os dados em paralelo (aquece o cache)
+      await Promise.all([
+        db.equipamentos.toArray(),
+        db.clientes.toArray(),
+        db.vendas.toArray(),
+        db.consumo.toArray(),
+        db.metas.toArray(),
+      ]);
       // Restaura a última página visitada
       const ultimaPagina = localStorage.getItem('paginaAtual') || 'dashboard';
       showPage(ultimaPagina);
