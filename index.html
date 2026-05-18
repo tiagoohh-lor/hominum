@@ -6,6 +6,8 @@
 <title>Hominum</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -303,6 +305,77 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
   text-align:left; width:100%;
 }
 .btn-logout:hover { background:rgba(233,69,96,0.3); }
+/* ── Radar Cidades ──────────────────────────────────── */
+.rc-layout {
+  display:grid; grid-template-columns:1fr 320px; gap:0;
+  height:calc(100vh - 185px); border-radius:12px; overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+#rc-map { width:100%; height:100%; }
+.rc-painel {
+  background:white; border-left:1px solid #e2e8f0;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.rc-resumo-cards {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  padding:14px; border-bottom:1px solid #e2e8f0; flex-shrink:0;
+}
+.rc-resumo-card {
+  background:#f8fafc; border-radius:10px; padding:10px;
+  text-align:center; border:1px solid #e2e8f0;
+}
+.rc-resumo-card .val { font-size:20px; font-weight:800; color:#0f3460; }
+.rc-resumo-card .lbl { font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+.rc-legenda {
+  display:flex; align-items:center; gap:6px; padding:10px 14px;
+  border-bottom:1px solid #e2e8f0; flex-wrap:wrap; flex-shrink:0;
+}
+.rc-legenda span { font-size:11px; color:#64748b; }
+.rc-leg-item { display:flex; align-items:center; gap:4px; font-size:10px; color:#475569; }
+.rc-leg-cor { width:12px; height:12px; border-radius:3px; }
+.rc-painel-header { padding:14px; border-bottom:1px solid #e2e8f0; flex-shrink:0; }
+.rc-painel-header h3 { font-size:13px; font-weight:700; color:#0f3460; }
+.rc-painel-header p  { font-size:11px; color:#94a3b8; margin-top:3px; }
+.rc-painel-body { flex:1; overflow-y:auto; padding:10px; }
+.rc-cidade-item {
+  padding:10px; border-radius:8px; cursor:pointer;
+  border:1px solid transparent; transition:all 0.15s; margin-bottom:4px;
+}
+.rc-cidade-item:hover { background:#f0f4ff; border-color:#bfdbfe; }
+.rc-cidade-item.ativo  { background:#eff6ff; border-color:#3b82f6; }
+.rc-cidade-nome { font-size:12px; font-weight:700; color:#1e293b; }
+.rc-cidade-count { font-size:11px; color:#64748b; margin-top:1px; }
+#rc-modal-cidade {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4);
+  z-index:9999; align-items:center; justify-content:center; padding:20px;
+}
+#rc-modal-cidade.open { display:flex; }
+#rc-modal-cidade-box {
+  background:white; border-radius:16px; width:100%; max-width:600px;
+  max-height:80vh; display:flex; flex-direction:column;
+  box-shadow:0 20px 60px rgba(0,0,0,0.25);
+}
+#rc-modal-cidade-header {
+  padding:18px 22px; border-bottom:1px solid #e2e8f0;
+  display:flex; align-items:center; justify-content:space-between;
+}
+#rc-modal-cidade-header h3 { font-size:15px; font-weight:700; color:#0f3460; }
+#rc-modal-cidade-header button {
+  background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;
+}
+#rc-modal-cidade-body { padding:18px; overflow-y:auto; }
+.rc-cliente-card {
+  padding:10px 14px; border:1px solid #e2e8f0; border-radius:10px;
+  margin-bottom:7px; transition:all 0.15s;
+}
+.rc-cliente-card:hover { background:#f8fafc; border-color:#93c5fd; }
+.rc-cliente-card .nome { font-size:13px; font-weight:600; color:#1e293b; }
+.rc-cliente-card .info { font-size:11px; color:#64748b; margin-top:2px; }
+.leaflet-tooltip-rc {
+  background:#0f3460; color:white; border:none; border-radius:8px;
+  padding:5px 10px; font-size:11px; font-weight:600;
+  box-shadow:0 4px 12px rgba(0,0,0,0.2);
+}
 </style>
 </head>
 <body>
@@ -350,6 +423,7 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
     <!-- Módulos -->
     <div class="nav-section nav-section-weak">
       <div class="nav-section-label">Módulos</div>
+      <a data-page="radar-cidades" onclick="showPage('radar-cidades')"><span class="icon">🗺️</span> Radar Cidades</a>
       <a data-page="insumos" onclick="showPage('insumos')"><span class="icon">🧪</span> Controle Insumos</a>
     </div>
 
@@ -907,6 +981,54 @@ th.sortable.desc::after { content:' ▼'; font-size:10px; color:#0f3460; }
     </div>
   </div>
 
+  <!-- RADAR CIDADES -->
+  <div id="page-radar-cidades" class="page">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>🗺️ Radar Cidades</h1>
+        <p id="rc-header-stats">Mapa de calor de Santa Catarina — distribuição de clientes por município</p>
+      </div>
+    </div>
+    <div class="rc-layout">
+      <div id="rc-map"></div>
+      <div class="rc-painel">
+        <div class="rc-resumo-cards">
+          <div class="rc-resumo-card">
+            <div class="val" id="rc-total-clientes">—</div>
+            <div class="lbl">Clientes</div>
+          </div>
+          <div class="rc-resumo-card">
+            <div class="val" id="rc-total-cidades">—</div>
+            <div class="lbl">Cidades</div>
+          </div>
+        </div>
+        <div class="rc-legenda">
+          <span>Clientes:</span>
+          <div class="rc-leg-item"><div class="rc-leg-cor" style="background:#f1f5f9;border:1px solid #e2e8f0"></div> 0</div>
+          <div class="rc-leg-item"><div class="rc-leg-cor" style="background:#bfdbfe"></div> 1–2</div>
+          <div class="rc-leg-item"><div class="rc-leg-cor" style="background:#60a5fa"></div> 3–5</div>
+          <div class="rc-leg-item"><div class="rc-leg-cor" style="background:#2563eb"></div> 6–10</div>
+          <div class="rc-leg-item"><div class="rc-leg-cor" style="background:#1e3a8a"></div> 10+</div>
+        </div>
+        <div class="rc-painel-header">
+          <h3>Cidades com Clientes</h3>
+          <p id="rc-painel-sub">Clique em uma cidade no mapa ou na lista</p>
+        </div>
+        <div class="rc-painel-body" id="rc-lista-cidades"></div>
+      </div>
+    </div>
+  </div>
+  <!-- Modal clientes da cidade -->
+  <div id="rc-modal-cidade" onclick="if(event.target===this)rcFecharModal()">
+    <div id="rc-modal-cidade-box">
+      <div id="rc-modal-cidade-header">
+        <h3 id="rc-modal-titulo">Clientes</h3>
+        <button onclick="rcFecharModal()">✕</button>
+      </div>
+      <div id="rc-modal-cidade-body"></div>
+    </div>
+  </div>
+
   <!-- CONTROLE INSUMOS -->
   <div id="page-insumos" class="page">
     <div class="page-header">
@@ -1144,6 +1266,7 @@ function showPage(name) {
   if (name === 'consumo') { paginaConsumo = 0; dadosConsumoFiltrado = null; renderConsumo(); }
   if (name === 'importar') loadImportStatus();
   if (name === 'insumos')  renderInsumos();
+  if (name === 'radar-cidades') rcInit();
 }
 
 function toggleNavConfig() {
@@ -2874,6 +2997,171 @@ async function fazerLogin() {
 async function fazerLogout() {
   if (!confirm('Deseja sair do sistema?')) return;
   await firebase.auth().signOut();
+}
+
+// ============================================================
+// RADAR CIDADES
+// ============================================================
+let rcMapInstance   = null;
+let rcGeoLayer      = null;
+let rcCidadesMap    = new Map();
+let rcCidadeSel     = null;
+let rcCarregado     = false;
+
+function rcNorm(str) {
+  if (!str) return '';
+  return String(str).toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9 ]/g, '').trim();
+}
+
+function rcCor(n) {
+  if (n === 0)  return '#f1f5f9';
+  if (n <= 2)   return '#bfdbfe';
+  if (n <= 5)   return '#93c5fd';
+  if (n <= 10)  return '#3b82f6';
+  if (n <= 20)  return '#2563eb';
+  return '#1e3a8a';
+}
+
+function rcOpacity(n) { return n === 0 ? 0.3 : 0.75; }
+
+async function rcInit() {
+  // Inicializa o mapa apenas uma vez
+  if (!rcMapInstance) {
+    rcMapInstance = L.map('rc-map', {
+      center: [-27.5, -50.5], zoom: 7,
+      zoomControl: true, attributionControl: false,
+    });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+      maxZoom: 12,
+    }).addTo(rcMapInstance);
+  }
+  // Corrige tamanho após o container ficar visível
+  setTimeout(() => rcMapInstance.invalidateSize(), 50);
+
+  // Carrega dados apenas uma vez
+  if (!rcCarregado) {
+    rcCarregado = true;
+    await rcCarregarDados();
+  }
+}
+
+async function rcCarregarDados() {
+  const [clientes, equips] = await Promise.all([
+    db.clientes.toArray(),
+    db.equipamentos.toArray(),
+  ]);
+
+  const cnpjMap = new Map();
+  clientes.forEach(c => { if (c.cnpj) cnpjMap.set(c.cnpj, c); });
+  equips.forEach(e => {
+    if (e.cnpj && !cnpjMap.has(e.cnpj)) {
+      cnpjMap.set(e.cnpj, {
+        cnpj: e.cnpj, razaoSocial: e.cliente || e.cnpj,
+        cidade: e.cidade, siglaEstado: e.siglaEstado,
+      });
+    }
+  });
+
+  rcCidadesMap.clear();
+  cnpjMap.forEach(cli => {
+    const cidade = cli.cidade;
+    if (!cidade) return;
+    const key = rcNorm(cidade);
+    if (!rcCidadesMap.has(key)) rcCidadesMap.set(key, { nome: cidade, clientes: [] });
+    rcCidadesMap.get(key).clientes.push(cli);
+  });
+
+  document.getElementById('rc-total-clientes').textContent = cnpjMap.size;
+  document.getElementById('rc-total-cidades').textContent  = rcCidadesMap.size;
+  document.getElementById('rc-header-stats').textContent   =
+    `${cnpjMap.size} clientes em ${rcCidadesMap.size} cidades — Santa Catarina`;
+
+  rcRenderLista();
+  await rcCarregarGeoJSON();
+}
+
+function rcRenderLista() {
+  const sorted = [...rcCidadesMap.entries()]
+    .sort((a, b) => b[1].clientes.length - a[1].clientes.length);
+  document.getElementById('rc-lista-cidades').innerHTML = sorted.map(([key, data]) => `
+    <div class="rc-cidade-item ${rcCidadeSel === key ? 'ativo' : ''}" onclick="rcSelecionarCidade('${key}')">
+      <div class="rc-cidade-nome">${data.nome}</div>
+      <div class="rc-cidade-count">${data.clientes.length} cliente${data.clientes.length !== 1 ? 's' : ''}</div>
+    </div>
+  `).join('') || '<p style="color:#94a3b8;font-size:12px;text-align:center;padding:20px">Nenhuma cidade encontrada</p>';
+}
+
+async function rcCarregarGeoJSON() {
+  const url  = 'https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-42-mun.json';
+  const resp = await fetch(url);
+  const geo  = await resp.json();
+
+  if (rcGeoLayer) rcGeoLayer.remove();
+
+  rcGeoLayer = L.geoJSON(geo, {
+    style: f => {
+      const key   = rcNorm(f.properties.NM_MUNICIP || '');
+      const data  = rcCidadesMap.get(key);
+      const count = data ? data.clientes.length : 0;
+      return { fillColor: rcCor(count), fillOpacity: rcOpacity(count), color: '#94a3b8', weight: 0.5 };
+    },
+    onEachFeature: (f, layer) => {
+      const key    = rcNorm(f.properties.NM_MUNICIP || '');
+      const nomeOr = f.properties.NM_MUNICIP || '';
+      const data   = rcCidadesMap.get(key);
+      const count  = data ? data.clientes.length : 0;
+
+      layer.bindTooltip(
+        `<strong>${nomeOr}</strong><br>${count} cliente${count !== 1 ? 's' : ''}`,
+        { className: 'leaflet-tooltip-rc', sticky: true }
+      );
+
+      layer.on({
+        mouseover: e => e.target.setStyle({ weight: 2, color: '#0f3460', fillOpacity: 0.9 }),
+        mouseout:  e => rcGeoLayer.resetStyle(e.target),
+        click:     () => {
+          rcCidadeSel = key;
+          rcRenderLista();
+          setTimeout(() => {
+            document.querySelectorAll('.rc-cidade-item').forEach(el => {
+              if (el.querySelector('.rc-cidade-nome')?.textContent === rcCidadesMap.get(key)?.nome)
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+          }, 80);
+          if (count > 0) rcAbrirModal(nomeOr, key);
+        },
+      });
+    },
+  }).addTo(rcMapInstance);
+}
+
+function rcSelecionarCidade(key) {
+  rcCidadeSel = key;
+  rcRenderLista();
+  const data = rcCidadesMap.get(key);
+  if (data && data.clientes.length > 0) rcAbrirModal(data.nome, key);
+}
+
+function rcAbrirModal(nomeOr, key) {
+  const data = rcCidadesMap.get(key);
+  if (!data || !data.clientes.length) return;
+  document.getElementById('rc-modal-titulo').textContent =
+    `📍 ${nomeOr} — ${data.clientes.length} cliente${data.clientes.length !== 1 ? 's' : ''}`;
+  document.getElementById('rc-modal-cidade-body').innerHTML = data.clientes
+    .sort((a, b) => (a.razaoSocial || '').localeCompare(b.razaoSocial || ''))
+    .map(c => `
+      <div class="rc-cliente-card">
+        <div class="nome">${c.razaoSocial || c.cnpj || '—'}</div>
+        <div class="info">${c.cnpj ? 'CNPJ: ' + c.cnpj : ''}${c.siglaEstado ? ' · ' + c.siglaEstado : ''}${c.regiao ? ' · ' + c.regiao : ''}</div>
+      </div>
+    `).join('');
+  document.getElementById('rc-modal-cidade').classList.add('open');
+}
+
+function rcFecharModal() {
+  document.getElementById('rc-modal-cidade').classList.remove('open');
 }
 
 // ============================================================
